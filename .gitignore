@@ -1,0 +1,8 @@
+﻿.venv/
+.venv-cv/
+__pycache__/
+.pytest_cache/
+.env
+cv/data/
+*.pt
+*.mp4
