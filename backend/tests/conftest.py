@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import URL
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.core.security import request_rate_limiter
 from app.database import create_database_engine, get_db
 from app.main import app
 from app.models import Base, User
@@ -37,6 +38,7 @@ def session_factory(tmp_path) -> Iterator[sessionmaker[Session]]:
 @pytest.fixture
 def client(session_factory: sessionmaker[Session]) -> Iterator[TestClient]:
     login_rate_limiter.clear("testclient")
+    request_rate_limiter.clear("testclient")
 
     def override_get_db():
         with session_factory.begin() as session:
@@ -60,3 +62,4 @@ def client(session_factory: sessionmaker[Session]) -> Iterator[TestClient]:
     finally:
         app.dependency_overrides.clear()
         login_rate_limiter.clear("testclient")
+        request_rate_limiter.clear("testclient")

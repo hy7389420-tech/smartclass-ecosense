@@ -17,6 +17,9 @@ The generated schema is available at [openapi.json](./api/openapi.json).
   return `409`. Invalid payloads or query parameters return `422`.
 - Errors use `{ "error": { "code": "...", "message": "..." } }`. Internal
   database details are not returned.
+- Request bodies larger than `MAX_REQUEST_BODY_BYTES` return `413`.
+  Rate-limited requests return `429` with a `Retry-After` header. HTTP and
+  unexpected server errors use the same safe error envelope.
 - Delete is guarded by database foreign keys: records referenced by other data
   cannot be removed.
 - Lecture timestamps accept ISO 8601. A timestamp without an offset is treated
@@ -39,6 +42,10 @@ The generated schema is available at [openapi.json](./api/openapi.json).
 | `GET` | `/alerts` | List role-scoped operational alerts |
 | `POST` | `/alerts/{id}/resolve` | Resolve an alert with a reason |
 | `GET` | `/audit-logs` | Filterable, paginated audit history (ADMIN only) |
+| `GET` | `/reports/lectures/{lecture_id}` | Session report JSON or CSV; students receive only their own record |
+| `GET` | `/reports/summaries?period=daily|weekly&date=YYYY-MM-DD` | Scoped daily/weekly summaries as JSON or CSV |
+| `POST` | `/admin/retention/run` | ADMIN-only retention preview or deletion; preview is default |
+| `POST` | `/ai/ask` | Optional, feature-flagged aggregate HOD assistant (ADMIN/HOD only) |
 
 | Resource | Create | List | Read one | Update | Delete |
 |---|---|---|---|---|---|
@@ -52,6 +59,44 @@ The generated schema is available at [openapi.json](./api/openapi.json).
 | Insights | - | `GET /insights/{lecture_id}` | - | - | - |
 | Activity | `POST /activity` | - | - | - | - |
 | Engagement | - | `GET /lectures/{id}/engagement`; `GET /lectures/{id}/suggestions` | - | - | - |
+| HOD assistant | `POST /ai/ask` | - | - | - | - |
+
+### Optional HOD assistant
+
+The endpoint is disabled unless `AI_ASSISTANT_ENABLED=true`. It accepts
+`{"question":"Which rooms are underutilized?"}` and returns a response with
+`status` (`answered` or `refused`), a supported `intent` (or `null`), and a
+plain-language `answer`. Question length is limited to 500 characters.
+
+Example response:
+
+```json
+{
+  "status": "answered",
+  "intent": "underutilized_rooms",
+  "answer": "Rooms below the configured utilization threshold: Room 101: 18.0%. This is occupancy-based and does not claim energy savings."
+}
+```
+
+Supported aggregate intents:
+
+- Highest average outside time by class (all completed attendance history).
+- Room utilization for the current local calendar week.
+- Underutilized rooms based on completed lecture history and the configured
+  utilization cutoff.
+- Unusual exit activity for yesterday using the configured exit-spike rules.
+- Average occupancy for a named room across completed lectures.
+- Current month versus previous month average occupancy, utilization, and
+  outside time.
+
+The feature uses deterministic intent matching and existing analytics logic;
+it does not call an LLM or execute generated SQL. It is restricted to ADMIN and
+HOD roles, and every data query is limited to the user's permitted class scope.
+Student-level data requests and unsupported questions receive a polite
+`refused` response. It returns aggregates only and does not claim that
+occupancy estimates are measured energy savings.
+When disabled, the endpoint returns `503` with error code
+`AI_ASSISTANT_DISABLED`.
 
 Additional attendance endpoints:
 
@@ -62,6 +107,48 @@ Additional attendance endpoints:
 | `GET` | `/lectures/{id}/attendance` | Read live or finalized student attendance |
 | `GET` | `/dashboard/{lecture_id}` | Read attendance cards, student table and camera/review status |
 | `GET` | `/students/{id}/presence-history` | Read that student's finalized lecture attendance |
+
+### Reports and data retention
+
+Reports are available only to authenticated users. ADMIN can access all
+lectures; HOD and FACULTY are restricted to their class/department assignments.
+STUDENT exports contain only the mapped student's attendance record and do not
+include class totals or engagement estimates.
+
+Session reports are available as JSON or CSV:
+
+```text
+GET /reports/lectures/{lecture_id}?format=json
+GET /reports/lectures/{lecture_id}?format=csv
+```
+
+Daily and weekly summaries use the configured `LOCAL_TIMEZONE`; a week runs
+Monday through Sunday. If omitted, `date` defaults to today in that timezone.
+CSV is the default spreadsheet-friendly export only when `format=csv` is set.
+PDF is not currently provided because no PDF library is part of the backend
+dependencies. Session report engagement is labeled
+`estimate based on observable indicators`; every report includes a
+limitations note.
+
+Retention uses `RETENTION_DAYS` (default `90`). It purges expired presence
+events, activity windows, and insights. A retained correction whose source
+event expires has its source link cleared; counts are reported in the audit
+entry. The endpoint defaults to dry-run and requires an explicit `dry_run:
+false` to delete:
+
+```http
+POST /admin/retention/run
+Authorization: Bearer <admin-token>
+Content-Type: application/json
+```
+
+```json
+{"dry_run": true}
+```
+
+The response gives `cutoff_at`, candidate counts, delete counts, and
+correction-link count. Attendance records and audit logs are not deleted by
+this retention task; see [data-retention policy](./backend/DATA_RETENTION.md).
 
 Create and update use the same complete resource body (`PUT` replaces the
 editable fields):

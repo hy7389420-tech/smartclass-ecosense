@@ -1,6 +1,7 @@
 import secrets
 from functools import lru_cache
 from math import isfinite
+from urllib.parse import urlsplit
 
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -13,6 +14,12 @@ class Settings(BaseSettings):
     local_timezone: str = "Asia/Kolkata"
     require_camera_key: bool = True
     jwt_secret_key: str = Field(default_factory=lambda: secrets.token_urlsafe(48))
+    cors_allowed_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+    max_request_body_bytes: int = Field(default=1_048_576, ge=1024, le=10_485_760)
+    request_rate_limit_requests: int = Field(default=120, ge=1)
+    request_rate_limit_window_seconds: int = Field(default=60, ge=1)
+    auth_rate_limit_requests: int = Field(default=30, ge=1)
+    event_rate_limit_requests: int = Field(default=30, ge=1)
     jwt_access_token_minutes: int = Field(default=15, ge=1, le=60)
     auth_login_max_attempts: int = Field(default=5, ge=1, le=100)
     auth_login_window_seconds: int = Field(default=60, ge=1, le=3600)
@@ -20,6 +27,8 @@ class Settings(BaseSettings):
     min_event_confidence: float = Field(default=0.5, ge=0, le=1)
     max_event_batch_size: int = Field(default=100, ge=1, le=1000)
     camera_offline_seconds: int = Field(default=120, ge=1)
+    retention_days: int = Field(default=90, ge=1, le=3650)
+    ai_assistant_enabled: bool = False
     low_confidence_alert_window_minutes: int = Field(default=5, ge=1, le=60)
     low_confidence_alert_min_events: int = Field(default=3, ge=1)
     unusual_exit_alert_window_minutes: int = Field(default=5, ge=1, le=60)
@@ -71,10 +80,17 @@ class Settings(BaseSettings):
     def utilization_cutoffs_are_ordered(self) -> "Settings":
         if not self.jwt_secret_key.strip() and self.app_env.lower() != "production":
             self.jwt_secret_key = secrets.token_urlsafe(48)
-        if self.app_env.lower() == "production" and len(self.jwt_secret_key) < 32:
-            raise ValueError(
-                "JWT_SECRET_KEY must contain at least 32 characters in production."
-            )
+        if self.app_env.lower() == "production":
+            normalized_secret = self.jwt_secret_key.strip().lower()
+            if len(normalized_secret) < 32 or any(
+                weak_value in normalized_secret
+                for weak_value in ("change-me", "changeme", "password", "secret")
+            ):
+                raise ValueError(
+                    "JWT_SECRET_KEY must be a non-default secret with at least "
+                    "32 characters in production."
+                )
+        self._validate_cors_origins()
         activity_numbers = (
             self.activity_movement_min,
             self.activity_movement_max,
@@ -145,6 +161,32 @@ class Settings(BaseSettings):
         ):
             raise ValueError("At least one activity signal weight must be positive.")
         return self
+
+    def _validate_cors_origins(self) -> None:
+        for origin in self.cors_origins:
+            parsed = urlsplit(origin)
+            if (
+                parsed.scheme not in {"http", "https"}
+                or not parsed.netloc
+                or parsed.path
+                or parsed.query
+                or parsed.fragment
+                or parsed.username is not None
+                or parsed.password is not None
+                or "*" in origin
+            ):
+                raise ValueError(
+                    "CORS_ALLOWED_ORIGINS must contain explicit HTTP(S) origins "
+                    "without paths, credentials, or wildcards."
+                )
+
+    @property
+    def cors_origins(self) -> list[str]:
+        return [
+            item.strip()
+            for item in self.cors_allowed_origins.split(",")
+            if item.strip()
+        ]
 
 
 @lru_cache

@@ -96,6 +96,67 @@ Authentication settings:
 | `AUTH_LOGIN_MAX_ATTEMPTS` | `5` | Login attempts per client IP in the time window |
 | `AUTH_LOGIN_WINDOW_SECONDS` | `60` | In-memory rate-limit window |
 
+## Security hardening
+
+`CORS_ALLOWED_ORIGINS` is a comma-separated list of exact HTTP(S) origins.
+The defaults support the local React development server; production should set
+only its actual frontend origins. Wildcards, paths and embedded credentials
+are rejected. CORS credentials are enabled only for those exact origins.
+
+Request bodies default to a 1 MiB maximum (`MAX_REQUEST_BODY_BYTES`). The
+process-local limiter allows 120 requests per minute globally, with separate
+30-per-minute buckets for `/auth/*` and `/events*` by client IP. Login keeps
+its stricter existing 5-attempt window. These in-memory limits are not shared
+between workers or servers.
+
+API responses include `nosniff`, frame denial, a strict referrer policy and
+`no-store` caching headers. Validation, HTTP and unexpected errors use a
+common safe error envelope. Unexpected failures are logged by exception type
+only, without echoing exception text to callers.
+
+Production requires a non-default `JWT_SECRET_KEY` with at least 32
+characters. Configure it through a secret manager or environment; never commit
+it to source control. Security boundaries and remaining limitations are
+documented in [SECURITY.md](../docs/backend/SECURITY.md).
+
+## Optional HOD assistant
+
+`POST /ai/ask` is available only to ADMIN and HOD accounts. It is disabled by
+default; set `AI_ASSISTANT_ENABLED=true` to enable it. The current version uses
+deterministic, rule-based intent detection and existing aggregate analytics. It
+does not call an LLM, run model-generated SQL, or return individual student
+records. Questions outside the supported set and requests for individual
+student data are politely refused.
+
+Supported questions cover highest average outside time by class, this week's
+room utilization, underutilized rooms, unusual activity yesterday, average
+occupancy of a named room, and this-month versus last-month aggregate trends.
+See [API_CONTRACT.md](../docs/API_CONTRACT.md) for request and response
+examples.
+
+## Reports and retention
+
+Authenticated staff can download a lecture report in JSON or CSV; students
+can export only their own record. Daily/weekly summaries are scoped to the
+user's role and use `LOCAL_TIMEZONE` for date boundaries. Engagement fields
+are explicitly marked as estimates and reports include a limitations note.
+PDF export is not included because no PDF library is currently installed or
+needed for the JSON/CSV MVP.
+
+`RETENTION_DAYS` defaults to 90. The admin API
+`POST /admin/retention/run` defaults to a dry-run; send `{"dry_run": false}`
+only after reviewing candidate counts to delete eligible events, activity
+windows, and insights. The script is also safe by default:
+
+```powershell
+Set-Location backend
+.\.venv-backend\Scripts\python.exe -m scripts.retention
+.\.venv-backend\Scripts\python.exe -m scripts.retention --execute
+```
+
+Each run writes an audit entry. This job does not delete attendance records or
+audit logs; the retention policy explains the resulting history limitation.
+
 ## Manual review and camera health
 
 Staff with access to a lecture can review flagged events at `GET /review/events`.
@@ -148,11 +209,17 @@ Event-ingestion settings in `backend/.env`:
 
 | Variable | Default | Purpose |
 |---|---:|---|
+| `CORS_ALLOWED_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | Exact allowed browser origins; comma-separated |
+| `MAX_REQUEST_BODY_BYTES` | `1048576` | Maximum request body size (1 MiB) |
+| `REQUEST_RATE_LIMIT_REQUESTS` / `REQUEST_RATE_LIMIT_WINDOW_SECONDS` | `120` / `60` | Global per-IP in-memory request limit |
+| `AUTH_RATE_LIMIT_REQUESTS` | `30` | Additional `/auth/*` per-IP limit per configured request window |
+| `EVENT_RATE_LIMIT_REQUESTS` | `30` | Additional `/events*` per-IP limit per configured request window |
 | `REQUIRE_CAMERA_KEY` | `true` | Require a registered camera key |
 | `EVENT_TIME_GRACE_SECONDS` | `300` | Allowed distance outside lecture time |
 | `MIN_EVENT_CONFIDENCE` | `0.5` | Lower confidence is saved for review |
 | `MAX_EVENT_BATCH_SIZE` | `100` | Maximum events in one batch (up to `1000`) |
 | `CAMERA_OFFLINE_SECONDS` | `120` | Maximum time since camera activity before dashboards show "Camera Offline" |
+| `RETENTION_DAYS` | `90` | Age threshold for event, activity-window, and insight cleanup |
 | `UNDERUTILIZED_CUTOFF_PERCENT` | `40` | Utilization below this value is classified as underutilized |
 | `OVERUTILIZED_CUTOFF_PERCENT` | `90` | Utilization above this value is classified as overutilized |
 | `INSIGHT_WINDOW_MINUTES` | `5` | Exit-anomaly bucket size |

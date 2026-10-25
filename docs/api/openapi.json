@@ -100,6 +100,52 @@
         ]
       }
     },
+    "/ai/ask": {
+      "post": {
+        "tags": [
+          "HOD assistant"
+        ],
+        "summary": "Ask Question",
+        "operationId": "ask_question_ai_ask_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssistantQuestion"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistantAnswer"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/alerts": {
       "get": {
         "tags": [
@@ -1447,6 +1493,206 @@
             }
           }
         }
+      }
+    },
+    "/reports/lectures/{lecture_id}": {
+      "get": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Read Session Report",
+        "operationId": "read_session_report_reports_lectures__lecture_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lecture_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Lecture Id"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "json",
+                "csv"
+              ],
+              "type": "string",
+              "default": "json",
+              "title": "Format"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionReportRead"
+                }
+              },
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reports/summaries": {
+      "get": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Read Summary Report",
+        "operationId": "read_summary_report_reports_summaries_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "daily",
+                "weekly"
+              ],
+              "type": "string",
+              "default": "daily",
+              "title": "Period"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "json",
+                "csv"
+              ],
+              "type": "string",
+              "default": "json",
+              "title": "Format"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SummaryReportRead"
+                }
+              },
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/retention/run": {
+      "post": {
+        "tags": [
+          "retention"
+        ],
+        "summary": "Post Retention Run",
+        "operationId": "post_retention_run_admin_retention_run_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetentionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetentionRunRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/classes": {
@@ -3240,6 +3486,65 @@
         ],
         "title": "AlertResolveWrite"
       },
+      "AssistantAnswer": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "answered",
+              "refused"
+            ],
+            "title": "Status"
+          },
+          "intent": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "highest_outside_by_class",
+                  "weekly_utilization",
+                  "underutilized_rooms",
+                  "unusual_activity_yesterday",
+                  "room_average_occupancy",
+                  "monthly_comparison"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intent"
+          },
+          "answer": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Answer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "intent",
+          "answer"
+        ],
+        "title": "AssistantAnswer"
+      },
+      "AssistantQuestion": {
+        "properties": {
+          "question": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Question"
+          }
+        },
+        "type": "object",
+        "required": [
+          "question"
+        ],
+        "title": "AssistantQuestion"
+      },
       "AttendanceResponse": {
         "properties": {
           "lecture_id": {
@@ -4551,6 +4856,142 @@
         ],
         "title": "LectureRead"
       },
+      "LectureSummaryRead": {
+        "properties": {
+          "lecture_id": {
+            "type": "integer",
+            "title": "Lecture Id"
+          },
+          "subject": {
+            "type": "string",
+            "title": "Subject"
+          },
+          "start_time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start Time"
+          },
+          "total_students": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Students"
+          },
+          "present": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Present"
+          },
+          "inside": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inside"
+          },
+          "outside": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outside"
+          },
+          "absent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Absent"
+          },
+          "inside_minutes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inside Minutes"
+          },
+          "outside_minutes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outside Minutes"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "ABSENT",
+                  "INSIDE",
+                  "OUTSIDE",
+                  "PARTIAL"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "student_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Student Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lecture_id",
+          "subject",
+          "start_time",
+          "total_students",
+          "present",
+          "inside",
+          "outside",
+          "absent",
+          "inside_minutes",
+          "outside_minutes"
+        ],
+        "title": "LectureSummaryRead"
+      },
       "LectureWrite": {
         "properties": {
           "classroom_id": {
@@ -5234,6 +5675,152 @@
         ],
         "title": "PresenceHistoryItem"
       },
+      "ReportAttendanceSummary": {
+        "properties": {
+          "total_students": {
+            "type": "integer",
+            "title": "Total Students"
+          },
+          "present": {
+            "type": "integer",
+            "title": "Present"
+          },
+          "inside": {
+            "type": "integer",
+            "title": "Inside"
+          },
+          "outside": {
+            "type": "integer",
+            "title": "Outside"
+          },
+          "absent": {
+            "type": "integer",
+            "title": "Absent"
+          },
+          "occupancy_percent": {
+            "type": "number",
+            "title": "Occupancy Percent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_students",
+          "present",
+          "inside",
+          "outside",
+          "absent",
+          "occupancy_percent"
+        ],
+        "title": "ReportAttendanceSummary"
+      },
+      "ReportLectureRead": {
+        "properties": {
+          "lecture_id": {
+            "type": "integer",
+            "title": "Lecture Id"
+          },
+          "subject": {
+            "type": "string",
+            "title": "Subject"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "classroom_id": {
+            "type": "integer",
+            "title": "Classroom Id"
+          },
+          "classroom_name": {
+            "type": "string",
+            "title": "Classroom Name"
+          },
+          "capacity": {
+            "type": "integer",
+            "title": "Capacity"
+          },
+          "start_time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start Time"
+          },
+          "end_time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "End Time"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lecture_id",
+          "subject",
+          "status",
+          "classroom_id",
+          "classroom_name",
+          "capacity",
+          "start_time",
+          "end_time"
+        ],
+        "title": "ReportLectureRead"
+      },
+      "RetentionRequest": {
+        "properties": {
+          "dry_run": {
+            "type": "boolean",
+            "title": "Dry Run",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "RetentionRequest"
+      },
+      "RetentionRunRead": {
+        "properties": {
+          "dry_run": {
+            "type": "boolean",
+            "title": "Dry Run"
+          },
+          "retention_days": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Retention Days"
+          },
+          "cutoff_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Cutoff At"
+          },
+          "candidates": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Candidates"
+          },
+          "deleted": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Deleted"
+          },
+          "correction_links_to_detach": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Correction Links To Detach"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dry_run",
+          "retention_days",
+          "cutoff_at",
+          "candidates",
+          "deleted",
+          "correction_links_to_detach"
+        ],
+        "title": "RetentionRunRead"
+      },
       "ReviewQueueRead": {
         "properties": {
           "items": {
@@ -5282,6 +5869,65 @@
           "reason"
         ],
         "title": "ReviewResolutionWrite"
+      },
+      "SessionReportRead": {
+        "properties": {
+          "lecture": {
+            "$ref": "#/components/schemas/ReportLectureRead"
+          },
+          "attendance_summary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReportAttendanceSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "student_records": {
+            "items": {
+              "$ref": "#/components/schemas/AttendanceStudentRead"
+            },
+            "type": "array",
+            "title": "Student Records"
+          },
+          "engagement": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EngagementRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "estimates_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimates Note"
+          },
+          "limitations_note": {
+            "type": "string",
+            "title": "Limitations Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lecture",
+          "attendance_summary",
+          "student_records",
+          "engagement",
+          "estimates_note",
+          "limitations_note"
+        ],
+        "title": "SessionReportRead"
       },
       "StudentRead": {
         "properties": {
@@ -5513,6 +6159,53 @@
           "created_at"
         ],
         "title": "SuggestionRead"
+      },
+      "SummaryReportRead": {
+        "properties": {
+          "period": {
+            "type": "string",
+            "enum": [
+              "daily",
+              "weekly"
+            ],
+            "title": "Period"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date",
+            "title": "End Date"
+          },
+          "lecture_count": {
+            "type": "integer",
+            "title": "Lecture Count"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/LectureSummaryRead"
+            },
+            "type": "array",
+            "title": "Rows"
+          },
+          "limitations_note": {
+            "type": "string",
+            "title": "Limitations Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "period",
+          "start_date",
+          "end_date",
+          "lecture_count",
+          "rows",
+          "limitations_note"
+        ],
+        "title": "SummaryReportRead"
       },
       "UnusedPeriodRead": {
         "properties": {

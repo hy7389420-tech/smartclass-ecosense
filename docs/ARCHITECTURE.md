@@ -128,8 +128,10 @@ Utilization % = average occupied / room capacity x 100
 | GET | /analytics/utilization | Room utilization (Phase 5) |
 | GET | /insights/{lecture_id} | Insights (Phase 7) |
 | POST | /auth/login | Login (Phase 6) |
-
-Later: /reports, /alerts, /ai, /admin.
+| GET | /reports/lectures/{id} | Scoped session report as JSON or CSV (Phase 11) |
+| GET | /reports/summaries | Scoped daily/weekly summaries as JSON or CSV (Phase 11) |
+| POST | /admin/retention/run | ADMIN-only 90-day retention preview/deletion (Phase 11) |
+| POST | /ai/ask | Optional, feature-flagged aggregate HOD assistant (Phase 13) |
 
 ## 7. Roles (Phase 6)
 ADMIN (everything), HOD (department), FACULTY (assigned classes only), STUDENT (own data only).
@@ -148,6 +150,9 @@ missing HOD/faculty scope record is denied rather than widened.
 - AI insights use neutral wording and never name a reason or punishment.
 Phase 10 stores corrections as linked append-only events. Review resolution
 does not change the original event or silently include it in calculations.
+Phase 11 retention deletes events, activity windows, and insights older than
+90 days by default; attendance records and audit logs are not in this job's
+scope. The retention API defaults to a dry-run.
 
 ## 9. Failure handling
 - Camera offline -> show "Camera Offline", create no fake events.
@@ -163,3 +168,5 @@ does not change the original event or silently include it in calculations.
 | 2026-10-25 | Argon2id passwords, short-lived signed JWTs, explicit object-level RBAC | Protect backend APIs and prevent cross-student or cross-class data access |
 | 2026-10-25 | Student-user mapping is nullable and unique; no automatic identity matching | Preserve privacy and prevent accidental account-to-student linking |
 | 2026-10-25 | Corrections are linked `MANUAL_CORRECTION` events; review rows are never overwritten | Preserve provenance and recompute attendance from auditable effective events |
+| 2026-10-25 | Phase 11 exports JSON/CSV and uses a 90-day, dry-run-first retention policy | Provide usable reports without a new PDF dependency and preview permanent deletion |
+| 2026-10-25 | Phase 13 HOD questions use deterministic intents, existing analytics, role-scoped aggregates, and an off-by-default feature flag | Provide privacy-bounded assistance without LLM-generated queries or unsupported claims |

@@ -4,10 +4,10 @@ Update this file at the END of every coding session (you or the AI agent).
 A new chat/agent reads this first to know where to continue.
 
 ## Current status
-- **Current phase:** CV Steps 4.1-4.6 and Steps A-F are implemented and unit tested; backend Phases 0-10 are implemented and tested.
+- **Current phase:** CV Steps 4.1-4.6 and Steps A-F are implemented and unit tested; backend Phases 0-13 are implemented and tested.
 - **Last updated:** 2026-10-25
-- **Working right now:** Backend Phase 10 manual correction, audit logs, review queue, operational alerts, and camera health are complete and verified.
-- **Next task:** Phase 11 reports and data retention; CV hardware validation remains pending.
+- **Working right now:** Backend Phase 13 optional HOD assistant is implemented and verified; awaiting review/approval before commit or Phase 14.
+- **Next task:** Review and approve Phase 13; CV hardware validation remains pending.
 
 ## Backend status
 - [x] Phase 0: isolated backend environment, FastAPI app, `/health`, database-checking `/ready`, structured logging, setup docs, and tests.
@@ -21,13 +21,18 @@ A new chat/agent reads this first to know where to continue.
 - [x] Phase 8: validated numeric activity-window ingestion; weighted class-level estimates with missing-signal handling, peaks, low runs and decline detection; neutral, deduplicated R1-R6 teaching suggestions.
 - [x] Phase 9: Argon2id password hashing, short-lived JWT login/me/change-password, immediate token revocation after password changes, generic login errors and in-process rate limiting; protected routes with ADMIN/HOD/FACULTY/STUDENT scopes; explicit nullable unique `users.student_id` mapping; secure admin provisioning; authenticated append-only suggestion decision logs.
 - [x] Phase 10: append-only manual correction events and audit snapshots; scoped review queue and resolution; camera heartbeat, offline detection and recovery; deduplicated neutral low-confidence/unusual-exit alerts; role-scoped alert resolution and ADMIN-only audit-log API.
-- [ ] Next: Phase 11 reports and data retention.
-- Test result: 121 backend tests passed, including Phase 10 correction, audit, camera health, alert, event-ingestion, and migration tests. Ruff check and format check passed; all 7 Phase 10 OpenAPI routes are present in the regenerated schema. One existing Starlette `TestClient`/httpx deprecation warning remains.
+- [x] Phase 11: role-scoped lecture and daily/weekly reports in JSON/CSV; report estimate/limitations notes; 90-day retention preview/deletion endpoint and CLI with audit entries; retention policy documentation.
+- [x] Phase 12: exact-origin CORS validation, request body caps, per-IP rate limits, security headers, safe error envelopes/logging, production JWT secret checks, and dependency audit.
+- [x] Phase 13: off-by-default ADMIN/HOD natural-language assistant with six rule-based aggregate intents, department-scoped queries, student-data refusals, API contract, and OpenAPI export. No LLM or generated SQL is used.
+- Test result: 151 backend tests passed, including Phase 13 intent, privacy, role, scope and feature-flag checks. Ruff check/format passed for app, tests, scripts, and Alembic; `pip-audit -r requirements.txt` reported no known vulnerabilities in the Phase 12 run. OpenAPI JSON was regenerated and parsed successfully. One existing Starlette `TestClient`/httpx deprecation warning remains.
 - Known tooling warning: Starlette's TestClient currently warns that its `httpx` integration is deprecated; tests still pass.
 - Auth limitation: login rate limiting is process-local and keyed by client IP; multi-worker/production deployments need a shared limiter. Blank development JWT secrets are generated per process; configure a strong `JWT_SECRET_KEY` in production.
+- Phase 12 limitation: global/auth/event rate limits are process-local and use direct client IP; reverse-proxy deployments need infrastructure controls or trusted-proxy handling. No penetration or load test was run.
+- Phase 13 limitation: the assistant is deterministic intent matching, not an LLM; it supports only the six documented aggregate questions, and date ranges use `LOCAL_TIMEZONE`. Answers depend on the completeness of stored finalized events and attendance data.
 - Mapping decision: legacy accounts stay `student_id=NULL`; no email/name matching is performed. HOD department scope uses the department on the HOD's linked `faculty` profile; missing scope mappings are denied.
 - Phase 10 correction provenance: keep the flagged source row unchanged except its review status; append a linked `MANUAL_CORRECTION` row whose effective `correction_event_type` participates in presence/analytics. Every review and alert resolution records actor, reason, and before/after values.
 - Camera health thresholds: `CAMERA_OFFLINE_SECONDS=120`; low-confidence and unusual-exit alerts default to 3 events in a 5-minute window. Alert refresh is performed on `GET /alerts` and camera heartbeats; no background scheduler is configured.
+- Phase 11 retention limitation: the 90-day job removes presence events, activity windows, and insights only. Attendance records and audit logs (which may contain correction snapshots) are retained; no scheduler is configured. PDF export was not added because no lightweight PDF library is already installed; JSON/CSV are supported.
 - Presence rule decision: count only observed time from the first ENTRY; the prompt's 10:02 ENTRY example therefore yields 46 inside minutes and 12 outside minutes. Some older project examples still say 48; update them when their scope is approved.
 - Event ingestion: `REQUIRE_CAMERA_KEY=true`, 300-second grace window, minimum confidence 0.5, and max batch size 100 by default. Invalid sequences and uncertain events are persisted as review-required and excluded from calculations.
 - Phase 4 event endpoint and JSONL importer tests pass. CV hardware validation and direct live delivery remain separate pending work; no CV files were changed for this phase.

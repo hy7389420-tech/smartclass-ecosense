@@ -34,3 +34,39 @@ def test_blank_development_jwt_secret_is_generated():
 def test_production_rejects_weak_jwt_secret():
     with pytest.raises(ValidationError, match="JWT_SECRET_KEY"):
         Settings(jwt_secret_key="short", app_env="production")
+
+
+def test_production_rejects_default_like_jwt_secret():
+    with pytest.raises(ValidationError, match="non-default secret"):
+        Settings(
+            jwt_secret_key="change-me-this-is-a-long-default-secret-value",
+            app_env="production",
+        )
+
+
+@pytest.mark.parametrize(
+    "origins",
+    [
+        "*",
+        "https://example.test/path",
+        "javascript://example.test",
+        "https://user:password@example.test",
+    ],
+)
+def test_cors_rejects_wildcard_and_non_origin_values(origins):
+    with pytest.raises(ValidationError, match="CORS_ALLOWED_ORIGINS"):
+        Settings(cors_allowed_origins=origins)
+
+
+def test_security_limit_defaults_and_bounds():
+    settings = Settings()
+    assert settings.max_request_body_bytes == 1_048_576
+    assert settings.request_rate_limit_requests == 120
+    assert settings.auth_rate_limit_requests == 30
+    assert settings.event_rate_limit_requests == 30
+    with pytest.raises(ValidationError):
+        Settings(max_request_body_bytes=128)
+
+
+def test_ai_assistant_is_disabled_by_default():
+    assert Settings().ai_assistant_enabled is False

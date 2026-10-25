@@ -69,3 +69,14 @@ The Phase 9 migration leaves every existing user with `student_id=NULL` and
 sets `token_version=0`. Map student accounts only through an explicit,
 verified student ID; the migration never matches email or name. HOD accounts
 derive their department scope from a corresponding `faculty` profile.
+
+## Retention
+
+`RETENTION_DAYS` defaults to 90. The Phase 11 retention job deletes old
+`presence_events`, `activity_windows`, and `insights` rows by their event
+timestamp, window end, and creation timestamp respectively. A correction link
+from a retained correction to an expired source event is detached before
+deletion so database foreign keys remain valid. Attendance records and audit
+logs are intentionally outside this job's deletion scope and are retained;
+see [DATA_RETENTION.md](./backend/DATA_RETENTION.md) for the full policy and
+current limitations.
