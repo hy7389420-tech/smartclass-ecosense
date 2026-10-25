@@ -211,6 +211,10 @@ class PresenceEvent(Base):
     student_id: Mapped[int | None] = mapped_column(
         ForeignKey("students.id"), nullable=True, index=True
     )
+    correction_of_event_id: Mapped[int | None] = mapped_column(
+        ForeignKey("presence_events.id"), nullable=True, index=True
+    )
+    correction_event_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
     student_code_raw: Mapped[str | None] = mapped_column(String(64), nullable=True)
     event_type: Mapped[str] = mapped_column(String(32), nullable=False)
     timestamp_utc: Mapped[datetime] = mapped_column(

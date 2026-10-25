@@ -45,6 +45,8 @@ class PresenceEventRead(TimestampedRead):
     lecture_id: int
     classroom_id: int
     student_id: int | None
+    correction_of_event_id: int | None = None
+    correction_event_type: Literal["ENTRY", "EXIT", "RETURN"] | None = None
     student_code_raw: str | None
     event_type: StoredEventType
     timestamp_utc: datetime
@@ -72,3 +74,23 @@ class EventBatchResponse(ORMModel):
     accepted_count: int
     flagged_count: int
     duplicate_count: int
+
+
+class EventCorrectionWrite(ORMModel):
+    student_id: int | None = Field(default=None, gt=0)
+    event_type: Literal["ENTRY", "EXIT"]
+    timestamp: datetime
+    reason: Annotated[
+        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=1000)
+    ]
+
+    @field_validator("timestamp")
+    @classmethod
+    def convert_timestamp_to_utc(cls, value: datetime) -> datetime:
+        return normalize_input_datetime(value)
+
+
+class ReviewResolutionWrite(ORMModel):
+    reason: Annotated[
+        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=1000)
+    ]

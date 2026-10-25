@@ -131,6 +131,18 @@ def test_initial_migration_runs_on_a_fresh_database(tmp_path: Path) -> None:
             command.upgrade(config, "head")
 
             assert EXPECTED_TABLES <= set(inspect(connection).get_table_names())
+            user_columns = {
+                column["name"] for column in inspect(connection).get_columns("users")
+            }
+            event_columns = {
+                column["name"]
+                for column in inspect(connection).get_columns("presence_events")
+            }
+            assert {"student_id", "token_version"} <= user_columns
+            assert {
+                "correction_of_event_id",
+                "correction_event_type",
+            } <= event_columns
             assert connection.execute(
                 text("SELECT version_num FROM alembic_version")
             ).scalar_one()

@@ -32,6 +32,13 @@ The generated schema is available at [openapi.json](./api/openapi.json).
 | `POST` | `/auth/change-password` | Change password and revoke existing access tokens |
 | `POST` | `/suggestions/{id}/decision` | Append an authenticated teacher decision |
 | `GET` | `/lectures/{lecture_id}/suggestions/log` | Read the scoped decision history |
+| `POST` | `/events/{id}/correct` | Correct a review event and recompute attendance |
+| `GET` | `/review/events` | List events awaiting manual review |
+| `POST` | `/review/events/{id}/resolve` | Resolve a review item without including it in calculations |
+| `POST` | `/cameras/{id}/heartbeat` | Update camera health using its camera key |
+| `GET` | `/alerts` | List role-scoped operational alerts |
+| `POST` | `/alerts/{id}/resolve` | Resolve an alert with a reason |
+| `GET` | `/audit-logs` | Filterable, paginated audit history (ADMIN only) |
 
 | Resource | Create | List | Read one | Update | Delete |
 |---|---|---|---|---|---|
@@ -186,10 +193,10 @@ lists that student's finalized records, newest lecture first.
 inside, outside, absent, and occupancy percentage, plus the student table,
 camera status, and pending-review event count. Occupancy is
 `inside / active enrolled students * 100`; when there are no enrolled students
-it is `0`. Camera status is `Online` only when a registered camera has
-successfully submitted an event within `CAMERA_ONLINE_WINDOW_SECONDS` (default
-`120`); otherwise it is `Camera Offline`. This is an event-recency signal, not
-a separate hardware health check.
+it is `0`. Camera status is `Online` only when a registered camera has sent
+activity within `CAMERA_OFFLINE_SECONDS` (default `120`); otherwise it is
+`Camera Offline`. Camera health is checked when alerts are requested or a
+heartbeat arrives; there is no background scheduler.
 
 Attendance durations are calculated only from observed presence after the
 first entry. For example, a 10:00-11:00 lecture with entry at 10:02, exit at
@@ -317,3 +324,32 @@ decision adds another history row and updates the current suggestion status.
 The decision-history endpoint is limited to ADMIN, HOD, or assigned FACULTY
 members for that lecture. Student accounts cannot read or decide class-level
 suggestions.
+
+## Manual review, corrections, alerts and camera health
+
+`GET /review/events` lists flagged events with `review_status="needs_review"`,
+scoped to the caller's department/classes. Faculty assigned to a lecture,
+department HOD, or ADMIN can correct an event with
+`POST /events/{id}/correct`. The request requires a reason and an event type
+(`ENTRY` or `EXIT`), timestamp, and student ID when the original event has no
+known student. The backend checks the lecture time, class membership, role
+scope, and event sequence. It marks the review item resolved, appends a
+`MANUAL_CORRECTION` event with the effective `correction_event_type`, stores
+before/after snapshots in `audit_logs`, and recomputes attendance. The original
+event data is not overwritten. A correction that does not fit the event
+sequence or lecture roster is rejected. A review item can instead be resolved
+without accepting it through `POST /review/events/{id}/resolve`; the original
+flag remains, so it stays excluded from calculations.
+
+`POST /cameras/{id}/heartbeat` requires `X-Camera-Key`. A heartbeat marks the
+matching camera online and resolves its open offline alert. `GET /alerts`
+refreshes camera status and creates one open alert per outage, plus neutral
+low-confidence and unusual-exit spike alerts once their configured thresholds
+are reached. Offline state never creates a presence event. Alert reads and
+resolution are scoped to ADMIN, HOD department, or assigned Faculty; resolving
+requires a reason. `GET /audit-logs` is ADMIN-only and accepts `entity_type`,
+`actor_user_id`, `limit`, and `offset`.
+
+Phase 10 thresholds are configurable with `CAMERA_OFFLINE_SECONDS`,
+`LOW_CONFIDENCE_ALERT_WINDOW_MINUTES`, `LOW_CONFIDENCE_ALERT_MIN_EVENTS`,
+`UNUSUAL_EXIT_ALERT_WINDOW_MINUTES`, and `UNUSUAL_EXIT_ALERT_MIN_EVENTS`.

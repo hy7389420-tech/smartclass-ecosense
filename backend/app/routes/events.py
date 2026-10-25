@@ -17,11 +17,13 @@ from app.routes.dependencies import (
 from app.schemas.common import PaginatedResponse
 from app.schemas.events import (
     EventBatchResponse,
+    EventCorrectionWrite,
     EventIngestRequest,
     EventIngestResponse,
     PresenceEventRead,
     StoredEventType,
 )
+from app.schemas.operations import EventCorrectionRead
 from app.services.access import (
     assert_can_view_lecture,
     assert_can_view_student,
@@ -29,12 +31,28 @@ from app.services.access import (
 )
 from app.services.camera_auth import authenticate_camera_key
 from app.services.events import ingest_event
+from app.services.operations import correct_presence_event
 
 router = APIRouter(prefix="/events", tags=["events"])
 CameraKey = Annotated[str | None, Header(alias="X-Camera-Key")]
 EventTypeFilter = Annotated[StoredEventType | None, Query()]
 FlaggedFilter = Annotated[bool | None, Query()]
 PositiveIdFilter = Annotated[int | None, Query(gt=0)]
+
+
+@router.post(
+    "/{event_id}/correct",
+    response_model=EventCorrectionRead,
+    dependencies=[Depends(require_role("ADMIN", "HOD", "FACULTY"))],
+)
+def correct_event(
+    event_id: int,
+    payload: EventCorrectionWrite,
+    session: DatabaseSession,
+    user: CurrentUser,
+) -> EventCorrectionRead:
+    event, attendance = correct_presence_event(session, event_id, user, payload)
+    return EventCorrectionRead(event=event, attendance=attendance)
 
 
 @router.post(

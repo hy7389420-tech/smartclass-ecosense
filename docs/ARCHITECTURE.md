@@ -144,8 +144,10 @@ missing HOD/faculty scope record is denied rather than widened.
 - No raw video stored. Only events.
 - Secrets in `.env`, never in code or Git.
 - Input validated with Pydantic.
-- Audit log for every manual correction (Phase 9).
+- Audit log for every manual correction and resolution, including actor, time, before/after state and reason.
 - AI insights use neutral wording and never name a reason or punishment.
+Phase 10 stores corrections as linked append-only events. Review resolution
+does not change the original event or silently include it in calculations.
 
 ## 9. Failure handling
 - Camera offline -> show "Camera Offline", create no fake events.
@@ -160,3 +162,4 @@ missing HOD/faculty scope record is denied rather than widened.
 | (start) | Rule-based insights before LLM | Normal logic where AI is not needed |
 | 2026-10-25 | Argon2id passwords, short-lived signed JWTs, explicit object-level RBAC | Protect backend APIs and prevent cross-student or cross-class data access |
 | 2026-10-25 | Student-user mapping is nullable and unique; no automatic identity matching | Preserve privacy and prevent accidental account-to-student linking |
+| 2026-10-25 | Corrections are linked `MANUAL_CORRECTION` events; review rows are never overwritten | Preserve provenance and recompute attendance from auditable effective events |

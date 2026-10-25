@@ -96,6 +96,25 @@ Authentication settings:
 | `AUTH_LOGIN_MAX_ATTEMPTS` | `5` | Login attempts per client IP in the time window |
 | `AUTH_LOGIN_WINDOW_SECONDS` | `60` | In-memory rate-limit window |
 
+## Manual review and camera health
+
+Staff with access to a lecture can review flagged events at `GET /review/events`.
+Corrections require a reason, are appended as linked `MANUAL_CORRECTION` events,
+and recompute attendance without overwriting the source event. The
+`GET /audit-logs` endpoint is ADMIN-only.
+
+Camera clients send `POST /cameras/{id}/heartbeat` with `X-Camera-Key`.
+`GET /alerts` refreshes camera health and creates deduplicated camera-offline,
+low-confidence-spike and unusual-exit alerts. A later heartbeat resolves the
+open offline alert. No heartbeat or offline state creates a fabricated presence
+event.
+
+| Variable | Default | Purpose |
+|---|---:|---|
+| `CAMERA_OFFLINE_SECONDS` | `120` | Time since a heartbeat before camera-offline state |
+| `LOW_CONFIDENCE_ALERT_WINDOW_MINUTES` / `LOW_CONFIDENCE_ALERT_MIN_EVENTS` | `5` / `3` | Low-confidence event spike window and threshold |
+| `UNUSUAL_EXIT_ALERT_WINDOW_MINUTES` / `UNUSUAL_EXIT_ALERT_MIN_EVENTS` | `5` / `3` | Exit activity window and threshold |
+
 CRUD request and response shapes are documented in
 [API_CONTRACT.md](../docs/API_CONTRACT.md).
 
@@ -133,7 +152,7 @@ Event-ingestion settings in `backend/.env`:
 | `EVENT_TIME_GRACE_SECONDS` | `300` | Allowed distance outside lecture time |
 | `MIN_EVENT_CONFIDENCE` | `0.5` | Lower confidence is saved for review |
 | `MAX_EVENT_BATCH_SIZE` | `100` | Maximum events in one batch (up to `1000`) |
-| `CAMERA_ONLINE_WINDOW_SECONDS` | `120` | How recent an ingested event must be for the dashboard to show a camera as online |
+| `CAMERA_OFFLINE_SECONDS` | `120` | Maximum time since camera activity before dashboards show "Camera Offline" |
 | `UNDERUTILIZED_CUTOFF_PERCENT` | `40` | Utilization below this value is classified as underutilized |
 | `OVERUTILIZED_CUTOFF_PERCENT` | `90` | Utilization above this value is classified as overutilized |
 | `INSIGHT_WINDOW_MINUTES` | `5` | Exit-anomaly bucket size |

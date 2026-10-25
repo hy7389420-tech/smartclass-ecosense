@@ -48,7 +48,9 @@ def regenerate_lecture_insights(session: Session, lecture_id: int) -> list[Insig
                 PresenceEvent.flagged_for_review.is_(False),
                 PresenceEvent.presence_confirmed.is_(True),
                 PresenceEvent.student_id.in_(enrolled_ids) if enrolled_ids else False,
-                PresenceEvent.event_type.in_(("ENTRY", "EXIT", "RETURN")),
+                PresenceEvent.event_type.in_(
+                    ("ENTRY", "EXIT", "RETURN", "MANUAL_CORRECTION")
+                ),
             )
             .order_by(PresenceEvent.timestamp_utc, PresenceEvent.id)
         )
@@ -59,7 +61,7 @@ def regenerate_lecture_insights(session: Session, lecture_id: int) -> list[Insig
         [
             ExitEvent(normalize_output_datetime(event.timestamp_utc))
             for event in valid_events
-            if event.event_type == "EXIT"
+            if (event.correction_event_type or event.event_type) == "EXIT"
         ],
         lecture_start,
         lecture_end,

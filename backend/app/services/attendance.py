@@ -131,7 +131,9 @@ def attendance_snapshot(
                 PresenceEvent.lecture_id == lecture.id,
                 PresenceEvent.flagged_for_review.is_(False),
                 PresenceEvent.presence_confirmed.is_(True),
-                PresenceEvent.event_type.in_(("ENTRY", "EXIT", "RETURN")),
+                PresenceEvent.event_type.in_(
+                    ("ENTRY", "EXIT", "RETURN", "MANUAL_CORRECTION")
+                ),
             )
             .order_by(PresenceEvent.timestamp_utc, PresenceEvent.id)
         )
@@ -148,7 +150,7 @@ def attendance_snapshot(
     for student in students:
         student_events = [
             LogicEvent(
-                event_type=event.event_type,
+                event_type=event.correction_event_type or event.event_type,
                 timestamp=normalize_output_datetime(event.timestamp_utc),
             )
             for event in event_rows
@@ -294,8 +296,8 @@ def get_finalized_attendance(session: Session, lecture: Lecture) -> AttendanceRe
 
 
 def camera_status(session: Session, classroom_id: int) -> str:
-    online_window = timedelta(seconds=get_settings().camera_online_window_seconds)
-    cutoff = datetime.now(UTC) - online_window
+    offline_window = timedelta(seconds=get_settings().camera_offline_seconds)
+    cutoff = datetime.now(UTC) - offline_window
     recent_camera = session.scalar(
         select(Camera.id)
         .where(

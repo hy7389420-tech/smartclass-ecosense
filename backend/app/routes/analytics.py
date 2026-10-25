@@ -65,7 +65,9 @@ def _lecture_analytics(session: DatabaseSession, lecture: Lecture, capacity: int
                 PresenceEvent.student_id.in_(enrolled_ids),
                 PresenceEvent.flagged_for_review.is_(False),
                 PresenceEvent.presence_confirmed.is_(True),
-                PresenceEvent.event_type.in_(("ENTRY", "EXIT", "RETURN")),
+                PresenceEvent.event_type.in_(
+                    ("ENTRY", "EXIT", "RETURN", "MANUAL_CORRECTION")
+                ),
             )
             .order_by(PresenceEvent.timestamp_utc, PresenceEvent.id)
         )
@@ -74,7 +76,7 @@ def _lecture_analytics(session: DatabaseSession, lecture: Lecture, capacity: int
         [
             OccupancyEvent(
                 student_id=event.student_id,
-                event_type=event.event_type,
+                event_type=event.correction_event_type or event.event_type,
                 timestamp=normalize_output_datetime(event.timestamp_utc),
             )
             for event in events

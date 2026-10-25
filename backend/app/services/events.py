@@ -96,7 +96,9 @@ def ingest_event(
                     PresenceEvent.student_id == student.id,
                     PresenceEvent.flagged_for_review.is_(False),
                     PresenceEvent.presence_confirmed.is_(True),
-                    PresenceEvent.event_type.in_(("ENTRY", "EXIT", "RETURN")),
+                    PresenceEvent.event_type.in_(
+                        ("ENTRY", "EXIT", "RETURN", "MANUAL_CORRECTION")
+                    ),
                 )
                 .order_by(PresenceEvent.timestamp_utc, PresenceEvent.id)
             )
@@ -113,8 +115,9 @@ def ingest_event(
                 LogicEvent(
                     event_type=(
                         "ENTRY"
-                        if existing.event_type == "RETURN"
-                        else existing.event_type
+                        if (existing.correction_event_type or existing.event_type)
+                        == "RETURN"
+                        else existing.correction_event_type or existing.event_type
                     ),
                     timestamp=normalize_output_datetime(existing.timestamp_utc),
                 )

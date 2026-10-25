@@ -22,14 +22,14 @@ them. The demo seed interprets its 10:00-11:00 schedule in `LOCAL_TIMEZONE`
 | `faculty_class_assignments` | Many-to-many assignments between faculty and classes. |
 | `lectures` | Class, classroom, optional faculty, subject, UTC schedule, and status. |
 | `cameras` | Camera identity and API-key hash for a classroom. |
-| `presence_events` | Entry/exit/return and lecture events; links lecture, room, optional student. |
+| `presence_events` | Entry/exit/return, lecture and manual-correction events; corrections retain their source event ID and effective event type. |
 | `attendance_records` | Per-student, per-lecture calculated presence totals. |
 | `activity_windows` | Aggregate numeric activity features for a lecture window. |
 | `insights` | Neutral lecture-level insight text and JSON evidence. |
 | `suggestions` | Lecture-level teaching suggestions and status. |
 | `suggestion_decisions` | Append-only teacher decisions linked to a suggestion and user. |
-| `audit_logs` | Actor, action, entity, before/after JSON, reason, and timestamp. |
-| `alerts` | Camera/classroom/lecture alerts and resolution timestamp. |
+| `audit_logs` | Actor, action, entity, before/after JSON, reason, and timestamp; used for corrections and operational resolutions. |
+| `alerts` | Camera/classroom/lecture alerts and resolution timestamp; one unresolved alert per incident key is created by the service. |
 | `system_settings` | Key/value settings. |
 
 ## Integrity and indexes
@@ -43,6 +43,10 @@ lecture/window time order, presence confidence, and constrained status values.
 
 Presence events have indexes on `(lecture_id, timestamp_utc)` and
 `(lecture_id, student_id)` for the event stream and student history queries.
+Manual corrections are appended as `MANUAL_CORRECTION` events with
+`correction_of_event_id` pointing to the reviewed event and
+`correction_event_type` describing the effective ENTRY/EXIT/RETURN used in
+attendance calculations. Original event data remains intact.
 Service-level rules such as overlapping lecture prevention and event sequence
 validation belong in later service/API phases.
 
