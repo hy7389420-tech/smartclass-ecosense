@@ -134,6 +134,11 @@ Later: /reports, /alerts, /ai, /admin.
 ## 7. Roles (Phase 6)
 ADMIN (everything), HOD (department), FACULTY (assigned classes only), STUDENT (own data only).
 Check the role on every protected endpoint. Never trust the frontend to hide data.
+Phase 9 uses an explicit nullable, unique `users.student_id` foreign key for
+Student ownership. Existing users remain unmapped, and a missing mapping is
+denied with `403`; no identity is inferred from email or name. HOD department
+scope is resolved from the department on its linked `faculty` profile. A
+missing HOD/faculty scope record is denied rather than widened.
 
 ## 8. Privacy and security rules in the design
 - No raw video stored. Only events.
@@ -153,3 +158,5 @@ Check the role on every protected endpoint. Never trust the frontend to hide dat
 | (start) | SQLite for MVP, PostgreSQL later | Simpler setup for a beginner |
 | (start) | Simulator before camera | Test backend and dashboard first |
 | (start) | Rule-based insights before LLM | Normal logic where AI is not needed |
+| 2026-10-25 | Argon2id passwords, short-lived signed JWTs, explicit object-level RBAC | Protect backend APIs and prevent cross-student or cross-class data access |
+| 2026-10-25 | Student-user mapping is nullable and unique; no automatic identity matching | Preserve privacy and prevent accidental account-to-student linking |

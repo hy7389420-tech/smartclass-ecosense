@@ -1,20 +1,26 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
 
 from app.models import PresenceEvent
-from app.routes.dependencies import DatabaseSession
+from app.routes.dependencies import CurrentUser, DatabaseSession, require_role
 from app.schemas.dashboard import DashboardCards, DashboardRead
+from app.services.access import assert_can_view_lecture
 from app.services.attendance import (
     attendance_snapshot,
     camera_status,
     get_lecture,
 )
 
-router = APIRouter(prefix="/dashboard", tags=["dashboard"])
+router = APIRouter(
+    prefix="/dashboard",
+    tags=["dashboard"],
+    dependencies=[Depends(require_role("ADMIN", "HOD", "FACULTY"))],
+)
 
 
 @router.get("/{lecture_id}", response_model=DashboardRead)
-def read_dashboard(lecture_id: int, session: DatabaseSession):
+def read_dashboard(lecture_id: int, session: DatabaseSession, user: CurrentUser):
+    assert_can_view_lecture(session, user, lecture_id)
     lecture = get_lecture(session, lecture_id)
     attendance = attendance_snapshot(session, lecture)
     pending_review_count = (

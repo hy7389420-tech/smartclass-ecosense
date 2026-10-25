@@ -43,6 +43,63 @@
         }
       }
     },
+    "/activity": {
+      "post": {
+        "tags": [
+          "activity"
+        ],
+        "summary": "Create Activity Windows",
+        "operationId": "create_activity_windows_activity_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ActivityWindowWrite"
+                  },
+                  {
+                    "items": {
+                      "$ref": "#/components/schemas/ActivityWindowWrite"
+                    },
+                    "type": "array"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityIngestResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/analytics/lecture/{lecture_id}": {
       "get": {
         "tags": [
@@ -50,6 +107,11 @@
         ],
         "summary": "Read Lecture Analytics",
         "operationId": "read_lecture_analytics_analytics_lecture__lecture_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "lecture_id",
@@ -92,6 +154,11 @@
         ],
         "summary": "Read Classroom Utilization",
         "operationId": "read_classroom_utilization_analytics_classroom__classroom_id__utilization_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "classroom_id",
@@ -168,6 +235,11 @@
         ],
         "summary": "Read Outside Duration",
         "operationId": "read_outside_duration_analytics_outside_duration_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "period",
@@ -209,6 +281,112 @@
         }
       }
     },
+    "/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Login",
+        "operationId": "login_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessTokenRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Read Current User",
+        "operationId": "read_current_user_auth_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserRead"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/auth/change-password": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Change Password",
+        "operationId": "change_password_auth_change_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/departments": {
       "post": {
         "tags": [
@@ -216,6 +394,11 @@
         ],
         "summary": "Create Department",
         "operationId": "create_department_departments_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -255,6 +438,11 @@
         ],
         "summary": "List Departments",
         "operationId": "list_departments_departments_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "limit",
@@ -311,6 +499,11 @@
         ],
         "summary": "Read Department",
         "operationId": "read_department_departments__department_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "department_id",
@@ -351,6 +544,11 @@
         ],
         "summary": "Update Department",
         "operationId": "update_department_departments__department_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "department_id",
@@ -401,6 +599,11 @@
         ],
         "summary": "Delete Department",
         "operationId": "delete_department_departments__department_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "department_id",
@@ -436,6 +639,11 @@
         ],
         "summary": "Read Dashboard",
         "operationId": "read_dashboard_dashboard__lecture_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "lecture_id",
@@ -564,6 +772,11 @@
         ],
         "summary": "List Events",
         "operationId": "list_events_events_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "lecture_id",
@@ -786,6 +999,11 @@
         ],
         "summary": "Create Class",
         "operationId": "create_class_classes_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -825,6 +1043,11 @@
         ],
         "summary": "List Classes",
         "operationId": "list_classes_classes_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "limit",
@@ -881,6 +1104,11 @@
         ],
         "summary": "Read Class",
         "operationId": "read_class_classes__class_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "class_id",
@@ -921,6 +1149,11 @@
         ],
         "summary": "Update Class",
         "operationId": "update_class_classes__class_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "class_id",
@@ -971,6 +1204,11 @@
         ],
         "summary": "Delete Class",
         "operationId": "delete_class_classes__class_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "class_id",
@@ -1006,6 +1244,11 @@
         ],
         "summary": "Create Classroom",
         "operationId": "create_classroom_classrooms_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -1045,6 +1288,11 @@
         ],
         "summary": "List Classrooms",
         "operationId": "list_classrooms_classrooms_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "limit",
@@ -1101,6 +1349,11 @@
         ],
         "summary": "Read Classroom",
         "operationId": "read_classroom_classrooms__classroom_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "classroom_id",
@@ -1141,6 +1394,11 @@
         ],
         "summary": "Update Classroom",
         "operationId": "update_classroom_classrooms__classroom_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "classroom_id",
@@ -1191,6 +1449,11 @@
         ],
         "summary": "Delete Classroom",
         "operationId": "delete_classroom_classrooms__classroom_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "classroom_id",
@@ -1226,6 +1489,11 @@
         ],
         "summary": "Read Student Presence History",
         "operationId": "read_student_presence_history_students__student_id__presence_history_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "student_id",
@@ -1272,6 +1540,11 @@
         ],
         "summary": "Create Student",
         "operationId": "create_student_students_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -1311,6 +1584,11 @@
         ],
         "summary": "List Students",
         "operationId": "list_students_students_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "limit",
@@ -1367,6 +1645,11 @@
         ],
         "summary": "Read Student",
         "operationId": "read_student_students__student_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "student_id",
@@ -1407,6 +1690,11 @@
         ],
         "summary": "Update Student",
         "operationId": "update_student_students__student_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "student_id",
@@ -1457,6 +1745,11 @@
         ],
         "summary": "Delete Student",
         "operationId": "delete_student_students__student_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "student_id",
@@ -1492,6 +1785,11 @@
         ],
         "summary": "Start Lecture",
         "operationId": "start_lecture_lectures__lecture_id__start_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "lecture_id",
@@ -1534,6 +1832,11 @@
         ],
         "summary": "End Lecture",
         "operationId": "end_lecture_lectures__lecture_id__end_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "lecture_id",
@@ -1576,6 +1879,11 @@
         ],
         "summary": "Read Lecture Attendance",
         "operationId": "read_lecture_attendance_lectures__lecture_id__attendance_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "lecture_id",
@@ -1618,6 +1926,11 @@
         ],
         "summary": "Create Lecture",
         "operationId": "create_lecture_lectures_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -1657,6 +1970,11 @@
         ],
         "summary": "List Lectures",
         "operationId": "list_lectures_lectures_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "limit",
@@ -1713,6 +2031,11 @@
         ],
         "summary": "Read Lecture",
         "operationId": "read_lecture_lectures__lecture_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "lecture_id",
@@ -1753,6 +2076,11 @@
         ],
         "summary": "Update Lecture",
         "operationId": "update_lecture_lectures__lecture_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "lecture_id",
@@ -1803,6 +2131,11 @@
         ],
         "summary": "Delete Lecture",
         "operationId": "delete_lecture_lectures__lecture_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "lecture_id",
@@ -1830,10 +2163,522 @@
           }
         }
       }
+    },
+    "/insights/{lecture_id}": {
+      "get": {
+        "tags": [
+          "insights"
+        ],
+        "summary": "Read Lecture Insights",
+        "operationId": "read_lecture_insights_insights__lecture_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lecture_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Lecture Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InsightRead"
+                  },
+                  "title": "Response Read Lecture Insights Insights  Lecture Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lectures/{lecture_id}/engagement": {
+      "get": {
+        "tags": [
+          "engagement"
+        ],
+        "summary": "Read Lecture Engagement",
+        "operationId": "read_lecture_engagement_lectures__lecture_id__engagement_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lecture_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Lecture Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EngagementRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lectures/{lecture_id}/suggestions": {
+      "get": {
+        "tags": [
+          "engagement"
+        ],
+        "summary": "Read Lecture Suggestions",
+        "operationId": "read_lecture_suggestions_lectures__lecture_id__suggestions_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lecture_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Lecture Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SuggestionRead"
+                  },
+                  "title": "Response Read Lecture Suggestions Lectures  Lecture Id  Suggestions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lectures/{lecture_id}/suggestions/log": {
+      "get": {
+        "tags": [
+          "engagement"
+        ],
+        "summary": "Read Suggestion Decision Log",
+        "operationId": "read_suggestion_decision_log_lectures__lecture_id__suggestions_log_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lecture_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Lecture Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SuggestionDecisionRead"
+                  },
+                  "title": "Response Read Suggestion Decision Log Lectures  Lecture Id  Suggestions Log Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/suggestions/{suggestion_id}/decision": {
+      "post": {
+        "tags": [
+          "suggestions"
+        ],
+        "summary": "Decide Suggestion",
+        "operationId": "decide_suggestion_suggestions__suggestion_id__decision_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "suggestion_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Suggestion Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuggestionDecisionWrite"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuggestionDecisionRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AccessTokenRead": {
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token"
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type",
+            "default": "bearer"
+          },
+          "expires_in": {
+            "type": "integer",
+            "title": "Expires In"
+          }
+        },
+        "type": "object",
+        "required": [
+          "access_token",
+          "expires_in"
+        ],
+        "title": "AccessTokenRead"
+      },
+      "ActivityIngestResponse": {
+        "properties": {
+          "stored_count": {
+            "type": "integer",
+            "title": "Stored Count"
+          },
+          "duplicate_count": {
+            "type": "integer",
+            "title": "Duplicate Count"
+          },
+          "windows": {
+            "items": {
+              "$ref": "#/components/schemas/ActivityWindowRead"
+            },
+            "type": "array",
+            "title": "Windows"
+          }
+        },
+        "type": "object",
+        "required": [
+          "stored_count",
+          "duplicate_count",
+          "windows"
+        ],
+        "title": "ActivityIngestResponse"
+      },
+      "ActivityPeakRead": {
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          },
+          "estimate": {
+            "type": "number",
+            "title": "Estimate"
+          }
+        },
+        "type": "object",
+        "required": [
+          "timestamp",
+          "estimate"
+        ],
+        "title": "ActivityPeakRead"
+      },
+      "ActivityWindowRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "lecture_id": {
+            "type": "integer",
+            "title": "Lecture Id"
+          },
+          "window_start": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Window Start"
+          },
+          "window_end": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Window End"
+          },
+          "movement_level": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Movement Level"
+          },
+          "inactivity_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inactivity Seconds"
+          },
+          "front_facing_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Front Facing Ratio"
+          },
+          "audio_level_db_mean": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audio Level Db Mean"
+          },
+          "voice_activity_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Voice Activity Ratio"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "lecture_id",
+          "window_start",
+          "window_end",
+          "movement_level",
+          "inactivity_seconds",
+          "front_facing_ratio",
+          "audio_level_db_mean",
+          "voice_activity_ratio",
+          "source"
+        ],
+        "title": "ActivityWindowRead"
+      },
+      "ActivityWindowWrite": {
+        "properties": {
+          "lecture_id": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Lecture Id"
+          },
+          "window_start": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Window Start"
+          },
+          "window_end": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Window End"
+          },
+          "movement_level": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Movement Level"
+          },
+          "inactivity_seconds": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inactivity Seconds"
+          },
+          "front_facing_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Front Facing Ratio"
+          },
+          "audio_level_db_mean": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audio Level Db Mean"
+          },
+          "voice_activity_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Voice Activity Ratio"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "camera+mic",
+              "simulated",
+              "manual"
+            ],
+            "title": "Source"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lecture_id",
+          "window_start",
+          "window_end",
+          "source"
+        ],
+        "title": "ActivityWindowWrite"
+      },
       "AttendanceResponse": {
         "properties": {
           "lecture_id": {
@@ -1979,6 +2824,28 @@
           "flagged"
         ],
         "title": "AttendanceStudentRead"
+      },
+      "ChangePasswordRequest": {
+        "properties": {
+          "current_password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Current Password"
+          },
+          "new_password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "New Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "current_password",
+          "new_password"
+        ],
+        "title": "ChangePasswordRequest"
       },
       "ClassRead": {
         "properties": {
@@ -2305,6 +3172,60 @@
         ],
         "title": "DashboardRead"
       },
+      "DeclineRead": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "detected",
+              "not_detected",
+              "insufficient_data"
+            ],
+            "title": "Status"
+          },
+          "baseline_estimate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Estimate"
+          },
+          "recent_estimate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recent Estimate"
+          },
+          "drop": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Drop"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "baseline_estimate",
+          "recent_estimate",
+          "drop"
+        ],
+        "title": "DeclineRead"
+      },
       "DepartmentRead": {
         "properties": {
           "created_at": {
@@ -2343,6 +3264,207 @@
           "name"
         ],
         "title": "DepartmentWrite"
+      },
+      "EngagementRead": {
+        "properties": {
+          "lecture_id": {
+            "type": "integer",
+            "title": "Lecture Id"
+          },
+          "estimate_note": {
+            "type": "string",
+            "title": "Estimate Note"
+          },
+          "windows": {
+            "items": {
+              "$ref": "#/components/schemas/EngagementWindowRead"
+            },
+            "type": "array",
+            "title": "Windows"
+          },
+          "average_estimate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average Estimate"
+          },
+          "peaks": {
+            "items": {
+              "$ref": "#/components/schemas/ActivityPeakRead"
+            },
+            "type": "array",
+            "title": "Peaks"
+          },
+          "low_runs": {
+            "items": {
+              "$ref": "#/components/schemas/LowActivityRunRead"
+            },
+            "type": "array",
+            "title": "Low Runs"
+          },
+          "decline": {
+            "$ref": "#/components/schemas/DeclineRead"
+          },
+          "peak_drop_detected": {
+            "type": "boolean",
+            "title": "Peak Drop Detected"
+          },
+          "peak_estimate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Peak Estimate"
+          },
+          "recent_estimate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recent Estimate"
+          },
+          "voice_activity_average": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Voice Activity Average"
+          },
+          "voice_activity_windows": {
+            "type": "integer",
+            "title": "Voice Activity Windows"
+          },
+          "movement_level_max": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Movement Level Max"
+          },
+          "audio_level_average_dbfs": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audio Level Average Dbfs"
+          },
+          "valid_window_count": {
+            "type": "integer",
+            "title": "Valid Window Count"
+          },
+          "insufficient_window_count": {
+            "type": "integer",
+            "title": "Insufficient Window Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lecture_id",
+          "estimate_note",
+          "windows",
+          "average_estimate",
+          "peaks",
+          "low_runs",
+          "decline",
+          "peak_drop_detected",
+          "peak_estimate",
+          "recent_estimate",
+          "voice_activity_average",
+          "voice_activity_windows",
+          "movement_level_max",
+          "audio_level_average_dbfs",
+          "valid_window_count",
+          "insufficient_window_count"
+        ],
+        "title": "EngagementRead"
+      },
+      "EngagementWindowRead": {
+        "properties": {
+          "window_start": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Window Start"
+          },
+          "window_end": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Window End"
+          },
+          "estimate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimate"
+          },
+          "label": {
+            "type": "string",
+            "enum": [
+              "high",
+              "medium",
+              "low",
+              "insufficient_data"
+            ],
+            "title": "Label"
+          },
+          "available_signals": {
+            "type": "integer",
+            "title": "Available Signals"
+          },
+          "signals": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Signals"
+          }
+        },
+        "type": "object",
+        "required": [
+          "window_start",
+          "window_end",
+          "estimate",
+          "label",
+          "available_signals",
+          "signals"
+        ],
+        "title": "EngagementWindowRead"
       },
       "EventBatchResponse": {
         "properties": {
@@ -2515,6 +3637,46 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "InsightRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "lecture_id": {
+            "type": "integer",
+            "title": "Lecture Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "evidence_json": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Evidence Json"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "lecture_id",
+          "kind",
+          "text",
+          "evidence_json",
+          "created_at"
+        ],
+        "title": "InsightRead"
       },
       "LectureAnalyticsRead": {
         "properties": {
@@ -2722,6 +3884,58 @@
           "end_time"
         ],
         "title": "LectureWrite"
+      },
+      "LoginRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "minLength": 3,
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "LoginRequest"
+      },
+      "LowActivityRunRead": {
+        "properties": {
+          "start": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "format": "date-time",
+            "title": "End"
+          },
+          "window_count": {
+            "type": "integer",
+            "title": "Window Count"
+          },
+          "average_estimate": {
+            "type": "number",
+            "title": "Average Estimate"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start",
+          "end",
+          "window_count",
+          "average_estimate"
+        ],
+        "title": "LowActivityRunRead"
       },
       "OccupancyMinuteRead": {
         "properties": {
@@ -3281,6 +4495,153 @@
         ],
         "title": "StudentWrite"
       },
+      "SuggestionDecisionRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "suggestion_id": {
+            "type": "integer",
+            "title": "Suggestion Id"
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "accepted",
+              "rejected",
+              "ignored"
+            ],
+            "title": "Decision"
+          },
+          "decided_by": {
+            "type": "integer",
+            "title": "Decided By"
+          },
+          "decided_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Decided At"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "suggestion_id",
+          "decision",
+          "decided_by",
+          "decided_at",
+          "note"
+        ],
+        "title": "SuggestionDecisionRead"
+      },
+      "SuggestionDecisionWrite": {
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "accepted",
+              "rejected",
+              "ignored"
+            ],
+            "title": "Decision"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "decision"
+        ],
+        "title": "SuggestionDecisionWrite"
+      },
+      "SuggestionRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "lecture_id": {
+            "type": "integer",
+            "title": "Lecture Id"
+          },
+          "rule_id": {
+            "type": "string",
+            "title": "Rule Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "evidence_json": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Evidence Json"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Severity"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "accepted",
+              "rejected",
+              "ignored"
+            ],
+            "title": "Status"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "lecture_id",
+          "rule_id",
+          "title",
+          "text",
+          "evidence_json",
+          "severity",
+          "status",
+          "created_at"
+        ],
+        "title": "SuggestionRead"
+      },
       "UnusedPeriodRead": {
         "properties": {
           "lecture_id": {
@@ -3305,6 +4666,46 @@
           "end"
         ],
         "title": "UnusedPeriodRead"
+      },
+      "UserRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "student_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Student Id"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "role",
+          "student_id",
+          "is_active"
+        ],
+        "title": "UserRead"
       },
       "ValidationError": {
         "properties": {
@@ -3345,6 +4746,12 @@
           "type"
         ],
         "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "scheme": "bearer"
       }
     }
   }

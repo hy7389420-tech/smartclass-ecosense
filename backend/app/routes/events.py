@@ -1,13 +1,19 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Header, Query, Response, status
+from fastapi import APIRouter, Depends, Header, Query, Response, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import func, select
 
 from app.config import get_settings
 from app.core.errors import ApiError
-from app.models import PresenceEvent
-from app.routes.dependencies import DatabaseSession, PageLimit, PageOffset
+from app.models import Lecture, PresenceEvent
+from app.routes.dependencies import (
+    CurrentUser,
+    DatabaseSession,
+    PageLimit,
+    PageOffset,
+    require_role,
+)
 from app.schemas.common import PaginatedResponse
 from app.schemas.events import (
     EventBatchResponse,
@@ -15,6 +21,11 @@ from app.schemas.events import (
     EventIngestResponse,
     PresenceEventRead,
     StoredEventType,
+)
+from app.services.access import (
+    assert_can_view_lecture,
+    assert_can_view_student,
+    class_scope,
 )
 from app.services.camera_auth import authenticate_camera_key
 from app.services.events import ingest_event
@@ -117,9 +128,14 @@ def create_events_batch(
     )
 
 
-@router.get("", response_model=PaginatedResponse[PresenceEventRead])
+@router.get(
+    "",
+    response_model=PaginatedResponse[PresenceEventRead],
+    dependencies=[Depends(require_role("ADMIN", "HOD", "FACULTY", "STUDENT"))],
+)
 def list_events(
     session: DatabaseSession,
+    user: CurrentUser,
     lecture_id: PositiveIdFilter = None,
     student_id: PositiveIdFilter = None,
     event_type: EventTypeFilter = None,
@@ -128,9 +144,23 @@ def list_events(
     offset: PageOffset = 0,
 ):
     filters = []
+    if user.role == "STUDENT":
+        if user.student_id is None:
+            class_scope(session, user)
+        filters.append(PresenceEvent.student_id == user.student_id)
+    elif user.role != "ADMIN":
+        filters.append(
+            PresenceEvent.lecture_id.in_(
+                select(Lecture.id).where(
+                    Lecture.class_id.in_(class_scope(session, user))
+                )
+            )
+        )
     if lecture_id is not None:
+        assert_can_view_lecture(session, user, lecture_id)
         filters.append(PresenceEvent.lecture_id == lecture_id)
     if student_id is not None:
+        assert_can_view_student(session, user, student_id)
         filters.append(PresenceEvent.student_id == student_id)
     if event_type is not None:
         filters.append(PresenceEvent.event_type == event_type)

@@ -1,7 +1,7 @@
 from datetime import date
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 
 from app.config import get_settings
@@ -13,7 +13,7 @@ from app.models import (
     PresenceEvent,
     Student,
 )
-from app.routes.dependencies import DatabaseSession
+from app.routes.dependencies import CurrentUser, DatabaseSession, require_role
 from app.schemas.analytics import (
     ClassroomUtilizationRead,
     LectureAnalyticsRead,
@@ -23,6 +23,7 @@ from app.schemas.analytics import (
     UnusedPeriodRead,
 )
 from app.schemas.resources import normalize_output_datetime
+from app.services.access import assert_can_view_lecture, class_scope
 from app.services.analytics import (
     LectureAnalytics,
     OccupancyEvent,
@@ -32,7 +33,11 @@ from app.services.analytics import (
     utilization_suggestion,
 )
 
-router = APIRouter(prefix="/analytics", tags=["analytics"])
+router = APIRouter(
+    prefix="/analytics",
+    tags=["analytics"],
+    dependencies=[Depends(require_role("ADMIN", "HOD", "FACULTY"))],
+)
 OutsidePeriod = Literal["day", "week", "month"]
 
 
@@ -83,7 +88,10 @@ def _lecture_analytics(session: DatabaseSession, lecture: Lecture, capacity: int
 
 
 @router.get("/lecture/{lecture_id}", response_model=LectureAnalyticsRead)
-def read_lecture_analytics(lecture_id: int, session: DatabaseSession):
+def read_lecture_analytics(
+    lecture_id: int, session: DatabaseSession, user: CurrentUser
+):
+    assert_can_view_lecture(session, user, lecture_id)
     lecture = session.get(Lecture, lecture_id)
     if lecture is None:
         raise ApiError(404, "LECTURE_NOT_FOUND", "Lecture was not found.")
@@ -143,19 +151,32 @@ def read_lecture_analytics(lecture_id: int, session: DatabaseSession):
 def read_classroom_utilization(
     classroom_id: int,
     session: DatabaseSession,
+    user: CurrentUser,
     from_date: Annotated[date | None, Query(alias="from")] = None,
     to_date: Annotated[date | None, Query(alias="to")] = None,
 ):
     classroom = session.get(Classroom, classroom_id)
     if classroom is None:
         raise ApiError(404, "CLASSROOM_NOT_FOUND", "Classroom was not found.")
+    accessible_lecture = session.scalar(
+        select(Lecture.id).where(
+            Lecture.classroom_id == classroom_id,
+            Lecture.class_id.in_(class_scope(session, user)),
+        )
+    )
+    if user.role != "ADMIN" and accessible_lecture is None:
+        raise ApiError(403, "FORBIDDEN", "You do not have access to this classroom.")
     if from_date is not None and to_date is not None and from_date > to_date:
         raise ApiError(422, "INVALID_DATE_RANGE", "'from' must be on or before 'to'.")
 
     lectures = list(
         session.scalars(
             select(Lecture)
-            .where(Lecture.classroom_id == classroom_id, Lecture.status == "completed")
+            .where(
+                Lecture.classroom_id == classroom_id,
+                Lecture.status == "completed",
+                Lecture.class_id.in_(class_scope(session, user)),
+            )
             .order_by(Lecture.start_time, Lecture.id)
         )
     )
@@ -237,12 +258,16 @@ def read_classroom_utilization(
 @router.get("/outside-duration", response_model=OutsideDurationRead)
 def read_outside_duration(
     session: DatabaseSession,
+    user: CurrentUser,
     period: Annotated[OutsidePeriod, Query()] = "day",
 ):
     rows = session.execute(
         select(Lecture.start_time, AttendanceRecord.outside_minutes, Lecture.id)
         .join(AttendanceRecord, AttendanceRecord.lecture_id == Lecture.id)
-        .where(Lecture.status == "completed")
+        .where(
+            Lecture.status == "completed",
+            Lecture.class_id.in_(class_scope(session, user)),
+        )
         .order_by(Lecture.start_time, Lecture.id)
     ).all()
     aggregates = aggregate_outside_duration(

@@ -1,9 +1,9 @@
 # SmartClass EcoSense API Contract
 
 Backend API is served by FastAPI. Interactive request/response schemas are also
-available at `/docs`. Current CRUD endpoints are unauthenticated; authentication
-and role checks are a later phase and must be added before deployment. Event
-ingestion is protected separately with a camera API key.
+available at `/docs`. Except for `/health`, `/ready`, and `/auth/login`,
+application endpoints require a JWT bearer token. Camera event ingestion uses
+its existing `X-Camera-Key` authentication; `GET /events` requires a user token.
 The generated schema is available at [openapi.json](./api/openapi.json).
 
 ## Common behavior
@@ -25,6 +25,14 @@ The generated schema is available at [openapi.json](./api/openapi.json).
 
 ## Endpoints
 
+| Method | Path | Purpose |
+|---|---|---|
+| `POST` | `/auth/login` | Verify credentials and return a short-lived JWT |
+| `GET` | `/auth/me` | Read the authenticated account |
+| `POST` | `/auth/change-password` | Change password and revoke existing access tokens |
+| `POST` | `/suggestions/{id}/decision` | Append an authenticated teacher decision |
+| `GET` | `/lectures/{lecture_id}/suggestions/log` | Read the scoped decision history |
+
 | Resource | Create | List | Read one | Update | Delete |
 |---|---|---|---|---|---|
 | Departments | `POST /departments` | `GET /departments` | `GET /departments/{id}` | `PUT /departments/{id}` | `DELETE /departments/{id}` |
@@ -34,6 +42,9 @@ The generated schema is available at [openapi.json](./api/openapi.json).
 | Lectures | `POST /lectures` | `GET /lectures` | `GET /lectures/{id}` | `PUT /lectures/{id}` | `DELETE /lectures/{id}` |
 | Events | `POST /events` and `POST /events/batch` | `GET /events` | - | - | - |
 | Analytics | - | `GET /analytics/lecture/{id}`; `GET /analytics/classroom/{id}/utilization`; `GET /analytics/outside-duration` | - | - | - |
+| Insights | - | `GET /insights/{lecture_id}` | - | - | - |
+| Activity | `POST /activity` | - | - | - | - |
+| Engagement | - | `GET /lectures/{id}/engagement`; `GET /lectures/{id}/suggestions` | - | - | - |
 
 Additional attendance endpoints:
 
@@ -117,7 +128,38 @@ duplicate counts.
 
 `GET /events` supports `lecture_id`, `student_id`, `event_type`, and
 `flagged_for_review` filters, plus the common `limit` and `offset` pagination
-parameters. Event timestamps are listed in ascending order.
+parameters. Event timestamps are listed in ascending order. Results are
+restricted to the authenticated user's role and scope; a student can only query
+their own events.
+
+## Authentication and role scope
+
+Send `Authorization: Bearer <access_token>` to protected endpoints. Login uses
+JSON with `email` and `password`; invalid email/password pairs return the same
+generic `401` response. Access tokens expire after 15 minutes by default.
+Login attempts are rate-limited in-process. Passwords use Argon2id. A password
+change increments the user's token version, so previously issued access tokens
+stop working immediately.
+
+| Role | Read scope | Write scope |
+|---|---|---|
+| `ADMIN` | All backend resources | Catalog administration |
+| `HOD` | Its mapped department and classes | No catalog writes |
+| `FACULTY` | Assigned classes/lectures and their students | Lecture lifecycle and activity windows for assigned lectures |
+| `STUDENT` | Own student record, presence history and events | No writes |
+
+A `STUDENT` account without a `users.student_id` mapping receives `403` and
+cannot access student data. Mapping is explicit; existing users remain
+unmapped after migration and no matching by email/name is attempted. HOD scope
+uses the department on the user's `faculty` profile; an HOD account without
+that profile is denied rather than given broader access.
+
+Create an initial administrator from the `backend` directory with
+`python -m scripts.create_admin --email admin@example.edu`. The script prompts
+for a password (12+ characters); alternatively provide `ADMIN_PASSWORD` via
+the environment. There is no default credential. Set `JWT_SECRET_KEY` to a
+random secret of at least 32 characters in production; in local development an
+ephemeral secret is generated when the setting is blank.
 
 ## Lecture lifecycle, attendance and dashboard
 
@@ -186,3 +228,92 @@ Utilization suggestions are explicitly simulated and include
 states that occupancy data can support resource optimization. Zero-occupancy
 intervals only describe observed gaps inside scheduled completed lectures;
 they do not infer that an unscheduled room was physically unused.
+
+## Anomaly, trend and insights
+
+`GET /insights/{lecture_id}` is available only for a completed lecture. Each
+request recomputes and replaces that lecture's stored insight rows, so repeated
+requests do not accumulate duplicates. The response is a JSON array containing
+`id`, `lecture_id`, `kind`, neutral `text`, numeric `evidence_json`, and
+`created_at`. Exit anomalies count valid confirmed exits in
+`INSIGHT_WINDOW_MINUTES` buckets (default `5`) and flag only buckets meeting the
+mean-plus-two-standard-deviations and minimum-exit thresholds. Trend comparison
+uses prior completed lectures of the same class; fewer than
+`INSIGHT_MIN_HISTORY` (default `3`) usable lectures yields a "not enough
+historical data" insight. Generated text contains aggregate numeric evidence
+only and never includes student names or claims why someone left.
+
+Thresholds are configurable with `INSIGHT_WINDOW_MINUTES`,
+`INSIGHT_MIN_EXITS` (default `3`), `INSIGHT_MIN_BUCKETS` (default `3`),
+`INSIGHT_MIN_HISTORY` (default `3`), and `INSIGHT_HISTORY_LECTURES`
+(default `5`).
+
+## Activity windows, engagement estimates and teaching suggestions
+
+`POST /activity` accepts one numeric activity window or an array of windows.
+Each window identifies a lecture and has a start/end timestamp, optional
+movement, inactivity, front-facing, audio-level and voice-activity features,
+and a source label. Windows must be 1-300 seconds by default, fit wholly inside
+a live or completed lecture, and not overlap another window for that lecture.
+Allowed sources are `camera+mic`, `simulated`, and `manual`.
+The maximum batch size is `ACTIVITY_MAX_BATCH_SIZE` (default `100`). Repeating
+identical data for the same lecture/window start is idempotent; different data
+for an existing start conflicts. A bad batch is rolled back in full. Missing
+signals remain null. The schema has no raw video, image, audio or transcript
+fields, and stores only numeric aggregate features.
+
+Example single-window request:
+
+```json
+{
+  "lecture_id": 12,
+  "window_start": "2030-01-01T10:00:00+05:30",
+  "window_end": "2030-01-01T10:01:00+05:30",
+  "movement_level": 0.32,
+  "inactivity_seconds": 18,
+  "front_facing_ratio": 0.76,
+  "audio_level_db_mean": -42.5,
+  "voice_activity_ratio": 0.21,
+  "source": "camera+mic"
+}
+```
+
+The response includes `stored_count`, `duplicate_count`, and the stored
+`windows`. New data and exact retries return `200`; missing lecture returns
+`404`; a different retry or overlapping window returns `409`; invalid values
+or oversized/empty batches return `422`.
+
+`GET /lectures/{id}/engagement` returns per-window class-level estimates,
+labels (`high`, `medium`, `low`, or `insufficient_data`), available-signal
+counts, the average estimate, peaks, low runs and decline evidence. The
+response includes the limitation note `"estimate based on observable
+indicators"`. Each available signal is normalized and its configured weight
+renormalized across available signals; a window with fewer than
+`ACTIVITY_MIN_SIGNALS` (default `2`) is marked `insufficient_data`. Inactivity
+is inverted as a ratio of the window duration. The default weights are
+movement `0.30`, inactivity `0.20`, front-facing `0.20`, voice activity
+`0.20`, and audio level `0.10`. No smoothing is applied in this version.
+Response metrics also include available and insufficient window counts,
+aggregate voice activity, maximum movement indicator, average audio level,
+and whether an earlier peak dropped before the latest configured windows.
+
+`GET /lectures/{id}/suggestions` generates and stores deduplicated pending
+suggestions for rules R1-R6. These are teacher decision support only: they do
+not take action, rank students, or make claims about learning or reasons for
+behavior. All suggestion text is checked by the shared neutral-text guard.
+Signal bounds, weights, label cutoffs, decline windows, rule thresholds and
+suggestion limits are configurable with `ACTIVITY_*` settings; see
+`backend/.env.example`.
+
+Suggestion rows contain `rule_id`, `title`, neutral `text`, numeric
+`evidence_json`, `severity`, `status` (initially `pending`), and `created_at`.
+Repeated reads do not create another row for the same rule and lecture.
+
+`POST /suggestions/{id}/decision` accepts `accepted`, `rejected`, or `ignored`
+and an optional note (maximum 1000 characters). Only ADMIN or a FACULTY member
+assigned to the suggestion's lecture can decide. Each decision appends a
+`suggestion_decisions` row with the authenticated actor; changing a prior
+decision adds another history row and updates the current suggestion status.
+The decision-history endpoint is limited to ADMIN, HOD, or assigned FACULTY
+members for that lecture. Student accounts cannot read or decide class-level
+suggestions.
