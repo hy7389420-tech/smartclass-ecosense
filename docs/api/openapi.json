@@ -1,0 +1,3351 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "SmartClass EcoSense API",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "summary": "Readiness",
+        "operationId": "readiness_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/analytics/lecture/{lecture_id}": {
+      "get": {
+        "tags": [
+          "analytics"
+        ],
+        "summary": "Read Lecture Analytics",
+        "operationId": "read_lecture_analytics_analytics_lecture__lecture_id__get",
+        "parameters": [
+          {
+            "name": "lecture_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Lecture Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LectureAnalyticsRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/analytics/classroom/{classroom_id}/utilization": {
+      "get": {
+        "tags": [
+          "analytics"
+        ],
+        "summary": "Read Classroom Utilization",
+        "operationId": "read_classroom_utilization_analytics_classroom__classroom_id__utilization_get",
+        "parameters": [
+          {
+            "name": "classroom_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Classroom Id"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassroomUtilizationRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/analytics/outside-duration": {
+      "get": {
+        "tags": [
+          "analytics"
+        ],
+        "summary": "Read Outside Duration",
+        "operationId": "read_outside_duration_analytics_outside_duration_get",
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "day",
+                "week",
+                "month"
+              ],
+              "type": "string",
+              "default": "day",
+              "title": "Period"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutsideDurationRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/departments": {
+      "post": {
+        "tags": [
+          "departments"
+        ],
+        "summary": "Create Department",
+        "operationId": "create_department_departments_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DepartmentWrite"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DepartmentRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "departments"
+        ],
+        "summary": "List Departments",
+        "operationId": "list_departments_departments_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_DepartmentRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/departments/{department_id}": {
+      "get": {
+        "tags": [
+          "departments"
+        ],
+        "summary": "Read Department",
+        "operationId": "read_department_departments__department_id__get",
+        "parameters": [
+          {
+            "name": "department_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Department Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DepartmentRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "departments"
+        ],
+        "summary": "Update Department",
+        "operationId": "update_department_departments__department_id__put",
+        "parameters": [
+          {
+            "name": "department_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Department Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DepartmentWrite"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DepartmentRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "departments"
+        ],
+        "summary": "Delete Department",
+        "operationId": "delete_department_departments__department_id__delete",
+        "parameters": [
+          {
+            "name": "department_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Department Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dashboard/{lecture_id}": {
+      "get": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Read Dashboard",
+        "operationId": "read_dashboard_dashboard__lecture_id__get",
+        "parameters": [
+          {
+            "name": "lecture_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Lecture Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/events": {
+      "post": {
+        "tags": [
+          "events"
+        ],
+        "summary": "Create Event",
+        "operationId": "create_event_events_post",
+        "parameters": [
+          {
+            "name": "X-Camera-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Camera-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventIngestRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventIngestResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Idempotent duplicate.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventIngestResponse"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Event saved for manual review.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventIngestResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Camera key is missing or invalid."
+          },
+          "403": {
+            "description": "Camera is assigned to another classroom."
+          },
+          "404": {
+            "description": "Lecture was not found."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "events"
+        ],
+        "summary": "List Events",
+        "operationId": "list_events_events_get",
+        "parameters": [
+          {
+            "name": "lecture_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lecture Id"
+            }
+          },
+          {
+            "name": "student_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Student Id"
+            }
+          },
+          {
+            "name": "event_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "ENTRY",
+                    "EXIT",
+                    "RETURN",
+                    "LECTURE_START",
+                    "LECTURE_END",
+                    "MANUAL_CORRECTION"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Event Type"
+            }
+          },
+          {
+            "name": "flagged_for_review",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Flagged For Review"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_PresenceEventRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/events/batch": {
+      "post": {
+        "tags": [
+          "events"
+        ],
+        "summary": "Create Events Batch",
+        "operationId": "create_events_batch_events_batch_post",
+        "parameters": [
+          {
+            "name": "X-Camera-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Camera-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/EventIngestRequest"
+                },
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventBatchResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "All events were duplicates.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventBatchResponse"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "At least one event was saved for review.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventBatchResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Camera key is missing or invalid."
+          },
+          "403": {
+            "description": "Camera is assigned to another classroom."
+          },
+          "404": {
+            "description": "A lecture was not found."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/classes": {
+      "post": {
+        "tags": [
+          "classes"
+        ],
+        "summary": "Create Class",
+        "operationId": "create_class_classes_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClassWrite"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "classes"
+        ],
+        "summary": "List Classes",
+        "operationId": "list_classes_classes_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_ClassRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/classes/{class_id}": {
+      "get": {
+        "tags": [
+          "classes"
+        ],
+        "summary": "Read Class",
+        "operationId": "read_class_classes__class_id__get",
+        "parameters": [
+          {
+            "name": "class_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Class Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "classes"
+        ],
+        "summary": "Update Class",
+        "operationId": "update_class_classes__class_id__put",
+        "parameters": [
+          {
+            "name": "class_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Class Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClassWrite"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "classes"
+        ],
+        "summary": "Delete Class",
+        "operationId": "delete_class_classes__class_id__delete",
+        "parameters": [
+          {
+            "name": "class_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Class Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/classrooms": {
+      "post": {
+        "tags": [
+          "classrooms"
+        ],
+        "summary": "Create Classroom",
+        "operationId": "create_classroom_classrooms_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClassroomWrite"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassroomRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "classrooms"
+        ],
+        "summary": "List Classrooms",
+        "operationId": "list_classrooms_classrooms_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_ClassroomRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/classrooms/{classroom_id}": {
+      "get": {
+        "tags": [
+          "classrooms"
+        ],
+        "summary": "Read Classroom",
+        "operationId": "read_classroom_classrooms__classroom_id__get",
+        "parameters": [
+          {
+            "name": "classroom_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Classroom Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassroomRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "classrooms"
+        ],
+        "summary": "Update Classroom",
+        "operationId": "update_classroom_classrooms__classroom_id__put",
+        "parameters": [
+          {
+            "name": "classroom_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Classroom Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClassroomWrite"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassroomRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "classrooms"
+        ],
+        "summary": "Delete Classroom",
+        "operationId": "delete_classroom_classrooms__classroom_id__delete",
+        "parameters": [
+          {
+            "name": "classroom_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Classroom Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/students/{student_id}/presence-history": {
+      "get": {
+        "tags": [
+          "students"
+        ],
+        "summary": "Read Student Presence History",
+        "operationId": "read_student_presence_history_students__student_id__presence_history_get",
+        "parameters": [
+          {
+            "name": "student_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Student Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PresenceHistoryItem"
+                  },
+                  "title": "Response Read Student Presence History Students  Student Id  Presence History Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/students": {
+      "post": {
+        "tags": [
+          "students"
+        ],
+        "summary": "Create Student",
+        "operationId": "create_student_students_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StudentWrite"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "students"
+        ],
+        "summary": "List Students",
+        "operationId": "list_students_students_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_StudentRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/students/{student_id}": {
+      "get": {
+        "tags": [
+          "students"
+        ],
+        "summary": "Read Student",
+        "operationId": "read_student_students__student_id__get",
+        "parameters": [
+          {
+            "name": "student_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Student Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "students"
+        ],
+        "summary": "Update Student",
+        "operationId": "update_student_students__student_id__put",
+        "parameters": [
+          {
+            "name": "student_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Student Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StudentWrite"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "students"
+        ],
+        "summary": "Delete Student",
+        "operationId": "delete_student_students__student_id__delete",
+        "parameters": [
+          {
+            "name": "student_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Student Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lectures/{lecture_id}/start": {
+      "post": {
+        "tags": [
+          "lectures"
+        ],
+        "summary": "Start Lecture",
+        "operationId": "start_lecture_lectures__lecture_id__start_post",
+        "parameters": [
+          {
+            "name": "lecture_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Lecture Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LectureRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lectures/{lecture_id}/end": {
+      "post": {
+        "tags": [
+          "lectures"
+        ],
+        "summary": "End Lecture",
+        "operationId": "end_lecture_lectures__lecture_id__end_post",
+        "parameters": [
+          {
+            "name": "lecture_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Lecture Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lectures/{lecture_id}/attendance": {
+      "get": {
+        "tags": [
+          "lectures"
+        ],
+        "summary": "Read Lecture Attendance",
+        "operationId": "read_lecture_attendance_lectures__lecture_id__attendance_get",
+        "parameters": [
+          {
+            "name": "lecture_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Lecture Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lectures": {
+      "post": {
+        "tags": [
+          "lectures"
+        ],
+        "summary": "Create Lecture",
+        "operationId": "create_lecture_lectures_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LectureWrite"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LectureRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "lectures"
+        ],
+        "summary": "List Lectures",
+        "operationId": "list_lectures_lectures_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_LectureRead_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lectures/{lecture_id}": {
+      "get": {
+        "tags": [
+          "lectures"
+        ],
+        "summary": "Read Lecture",
+        "operationId": "read_lecture_lectures__lecture_id__get",
+        "parameters": [
+          {
+            "name": "lecture_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Lecture Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LectureRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "lectures"
+        ],
+        "summary": "Update Lecture",
+        "operationId": "update_lecture_lectures__lecture_id__put",
+        "parameters": [
+          {
+            "name": "lecture_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Lecture Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LectureWrite"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LectureRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "lectures"
+        ],
+        "summary": "Delete Lecture",
+        "operationId": "delete_lecture_lectures__lecture_id__delete",
+        "parameters": [
+          {
+            "name": "lecture_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Lecture Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AttendanceResponse": {
+        "properties": {
+          "lecture_id": {
+            "type": "integer",
+            "title": "Lecture Id"
+          },
+          "lecture_status": {
+            "type": "string",
+            "title": "Lecture Status"
+          },
+          "finalized": {
+            "type": "boolean",
+            "title": "Finalized"
+          },
+          "total_students": {
+            "type": "integer",
+            "title": "Total Students"
+          },
+          "present": {
+            "type": "integer",
+            "title": "Present"
+          },
+          "inside": {
+            "type": "integer",
+            "title": "Inside"
+          },
+          "outside": {
+            "type": "integer",
+            "title": "Outside"
+          },
+          "absent": {
+            "type": "integer",
+            "title": "Absent"
+          },
+          "occupancy_percent": {
+            "type": "number",
+            "title": "Occupancy Percent"
+          },
+          "records": {
+            "items": {
+              "$ref": "#/components/schemas/AttendanceStudentRead"
+            },
+            "type": "array",
+            "title": "Records"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lecture_id",
+          "lecture_status",
+          "finalized",
+          "total_students",
+          "present",
+          "inside",
+          "outside",
+          "absent",
+          "occupancy_percent",
+          "records"
+        ],
+        "title": "AttendanceResponse"
+      },
+      "AttendanceStudentRead": {
+        "properties": {
+          "student_id": {
+            "type": "integer",
+            "title": "Student Id"
+          },
+          "student_code": {
+            "type": "string",
+            "title": "Student Code"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ABSENT",
+              "INSIDE",
+              "OUTSIDE",
+              "PARTIAL"
+            ],
+            "title": "Status"
+          },
+          "first_entry": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Entry"
+          },
+          "last_exit": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Exit"
+          },
+          "inside_minutes": {
+            "type": "number",
+            "title": "Inside Minutes"
+          },
+          "outside_minutes": {
+            "type": "number",
+            "title": "Outside Minutes"
+          },
+          "exit_count": {
+            "type": "integer",
+            "title": "Exit Count"
+          },
+          "return_count": {
+            "type": "integer",
+            "title": "Return Count"
+          },
+          "flagged": {
+            "type": "boolean",
+            "title": "Flagged"
+          }
+        },
+        "type": "object",
+        "required": [
+          "student_id",
+          "student_code",
+          "name",
+          "status",
+          "first_entry",
+          "last_exit",
+          "inside_minutes",
+          "outside_minutes",
+          "exit_count",
+          "return_count",
+          "flagged"
+        ],
+        "title": "AttendanceStudentRead"
+      },
+      "ClassRead": {
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "department_id": {
+            "type": "integer",
+            "title": "Department Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "section": {
+            "type": "string",
+            "title": "Section"
+          },
+          "year": {
+            "type": "integer",
+            "title": "Year"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created_at",
+          "id",
+          "department_id",
+          "name",
+          "section",
+          "year"
+        ],
+        "title": "ClassRead"
+      },
+      "ClassWrite": {
+        "properties": {
+          "department_id": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Department Id"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "section": {
+            "type": "string",
+            "maxLength": 40,
+            "title": "Section",
+            "default": ""
+          },
+          "year": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Year"
+          }
+        },
+        "type": "object",
+        "required": [
+          "department_id",
+          "name",
+          "year"
+        ],
+        "title": "ClassWrite"
+      },
+      "ClassroomRead": {
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "capacity": {
+            "type": "integer",
+            "title": "Capacity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created_at",
+          "id",
+          "name",
+          "capacity"
+        ],
+        "title": "ClassroomRead"
+      },
+      "ClassroomUtilizationRead": {
+        "properties": {
+          "classroom_id": {
+            "type": "integer",
+            "title": "Classroom Id"
+          },
+          "classroom_name": {
+            "type": "string",
+            "title": "Classroom Name"
+          },
+          "capacity": {
+            "type": "integer",
+            "title": "Capacity"
+          },
+          "from_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Date"
+          },
+          "to_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Date"
+          },
+          "lecture_count": {
+            "type": "integer",
+            "title": "Lecture Count"
+          },
+          "average_occupancy": {
+            "type": "number",
+            "title": "Average Occupancy"
+          },
+          "peak_occupancy": {
+            "type": "integer",
+            "title": "Peak Occupancy"
+          },
+          "peak_time": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Peak Time"
+          },
+          "utilization_percent": {
+            "type": "number",
+            "title": "Utilization Percent"
+          },
+          "exit_count": {
+            "type": "integer",
+            "title": "Exit Count"
+          },
+          "unused_minutes": {
+            "type": "number",
+            "title": "Unused Minutes"
+          },
+          "unused_periods": {
+            "items": {
+              "$ref": "#/components/schemas/UnusedPeriodRead"
+            },
+            "type": "array",
+            "title": "Unused Periods"
+          },
+          "classification": {
+            "type": "string",
+            "enum": [
+              "no_data",
+              "underutilized",
+              "well_utilized",
+              "overutilized"
+            ],
+            "title": "Classification"
+          },
+          "simulated": {
+            "type": "boolean",
+            "title": "Simulated"
+          },
+          "suggestion": {
+            "type": "string",
+            "title": "Suggestion"
+          }
+        },
+        "type": "object",
+        "required": [
+          "classroom_id",
+          "classroom_name",
+          "capacity",
+          "from_date",
+          "to_date",
+          "lecture_count",
+          "average_occupancy",
+          "peak_occupancy",
+          "peak_time",
+          "utilization_percent",
+          "exit_count",
+          "unused_minutes",
+          "unused_periods",
+          "classification",
+          "simulated",
+          "suggestion"
+        ],
+        "title": "ClassroomUtilizationRead"
+      },
+      "ClassroomWrite": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "capacity": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Capacity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "capacity"
+        ],
+        "title": "ClassroomWrite"
+      },
+      "DashboardCards": {
+        "properties": {
+          "total_students": {
+            "type": "integer",
+            "title": "Total Students"
+          },
+          "present": {
+            "type": "integer",
+            "title": "Present"
+          },
+          "inside": {
+            "type": "integer",
+            "title": "Inside"
+          },
+          "outside": {
+            "type": "integer",
+            "title": "Outside"
+          },
+          "absent": {
+            "type": "integer",
+            "title": "Absent"
+          },
+          "occupancy_percent": {
+            "type": "number",
+            "title": "Occupancy Percent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_students",
+          "present",
+          "inside",
+          "outside",
+          "absent",
+          "occupancy_percent"
+        ],
+        "title": "DashboardCards"
+      },
+      "DashboardRead": {
+        "properties": {
+          "lecture_id": {
+            "type": "integer",
+            "title": "Lecture Id"
+          },
+          "lecture_status": {
+            "type": "string",
+            "title": "Lecture Status"
+          },
+          "cards": {
+            "$ref": "#/components/schemas/DashboardCards"
+          },
+          "students": {
+            "items": {
+              "$ref": "#/components/schemas/AttendanceStudentRead"
+            },
+            "type": "array",
+            "title": "Students"
+          },
+          "camera_status": {
+            "type": "string",
+            "enum": [
+              "Online",
+              "Camera Offline"
+            ],
+            "title": "Camera Status"
+          },
+          "pending_review_count": {
+            "type": "integer",
+            "title": "Pending Review Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lecture_id",
+          "lecture_status",
+          "cards",
+          "students",
+          "camera_status",
+          "pending_review_count"
+        ],
+        "title": "DashboardRead"
+      },
+      "DepartmentRead": {
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created_at",
+          "id",
+          "name"
+        ],
+        "title": "DepartmentRead"
+      },
+      "DepartmentWrite": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "DepartmentWrite"
+      },
+      "EventBatchResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/EventIngestResponse"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "accepted_count": {
+            "type": "integer",
+            "title": "Accepted Count"
+          },
+          "flagged_count": {
+            "type": "integer",
+            "title": "Flagged Count"
+          },
+          "duplicate_count": {
+            "type": "integer",
+            "title": "Duplicate Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "accepted_count",
+          "flagged_count",
+          "duplicate_count"
+        ],
+        "title": "EventBatchResponse"
+      },
+      "EventIngestRequest": {
+        "properties": {
+          "student_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Student Id"
+          },
+          "classroom_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Classroom Id"
+          },
+          "lecture_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Lecture Id"
+          },
+          "event_type": {
+            "type": "string",
+            "enum": [
+              "ENTRY",
+              "EXIT"
+            ],
+            "title": "Event Type"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          },
+          "confidence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "camera",
+              "simulator",
+              "manual"
+            ],
+            "title": "Source"
+          },
+          "flagged_for_review": {
+            "type": "boolean",
+            "title": "Flagged For Review",
+            "default": false
+          },
+          "presence_confirmed": {
+            "type": "boolean",
+            "title": "Presence Confirmed",
+            "default": false
+          },
+          "client_event_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Event Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "student_id",
+          "classroom_id",
+          "lecture_id",
+          "event_type",
+          "timestamp",
+          "confidence",
+          "source"
+        ],
+        "title": "EventIngestRequest"
+      },
+      "EventIngestResponse": {
+        "properties": {
+          "event": {
+            "$ref": "#/components/schemas/PresenceEventRead"
+          },
+          "duplicate": {
+            "type": "boolean",
+            "title": "Duplicate"
+          },
+          "flagged_for_review": {
+            "type": "boolean",
+            "title": "Flagged For Review"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event",
+          "duplicate",
+          "flagged_for_review",
+          "reason"
+        ],
+        "title": "EventIngestResponse"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "LectureAnalyticsRead": {
+        "properties": {
+          "lecture_id": {
+            "type": "integer",
+            "title": "Lecture Id"
+          },
+          "classroom_id": {
+            "type": "integer",
+            "title": "Classroom Id"
+          },
+          "capacity": {
+            "type": "integer",
+            "title": "Capacity"
+          },
+          "enrolled_students": {
+            "type": "integer",
+            "title": "Enrolled Students"
+          },
+          "average_occupancy": {
+            "type": "number",
+            "title": "Average Occupancy"
+          },
+          "peak_occupancy": {
+            "type": "integer",
+            "title": "Peak Occupancy"
+          },
+          "peak_time": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Peak Time"
+          },
+          "utilization_percent": {
+            "type": "number",
+            "title": "Utilization Percent"
+          },
+          "exit_count": {
+            "type": "integer",
+            "title": "Exit Count"
+          },
+          "outside_minutes": {
+            "type": "number",
+            "title": "Outside Minutes"
+          },
+          "occupancy_by_minute": {
+            "items": {
+              "$ref": "#/components/schemas/OccupancyMinuteRead"
+            },
+            "type": "array",
+            "title": "Occupancy By Minute"
+          },
+          "unused_periods": {
+            "items": {
+              "$ref": "#/components/schemas/UnusedPeriodRead"
+            },
+            "type": "array",
+            "title": "Unused Periods"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lecture_id",
+          "classroom_id",
+          "capacity",
+          "enrolled_students",
+          "average_occupancy",
+          "peak_occupancy",
+          "peak_time",
+          "utilization_percent",
+          "exit_count",
+          "outside_minutes",
+          "occupancy_by_minute",
+          "unused_periods"
+        ],
+        "title": "LectureAnalyticsRead"
+      },
+      "LectureRead": {
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "classroom_id": {
+            "type": "integer",
+            "title": "Classroom Id"
+          },
+          "class_id": {
+            "type": "integer",
+            "title": "Class Id"
+          },
+          "subject": {
+            "type": "string",
+            "title": "Subject"
+          },
+          "faculty_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Faculty Id"
+          },
+          "start_time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start Time"
+          },
+          "end_time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "End Time"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created_at",
+          "id",
+          "classroom_id",
+          "class_id",
+          "subject",
+          "faculty_id",
+          "start_time",
+          "end_time",
+          "status"
+        ],
+        "title": "LectureRead"
+      },
+      "LectureWrite": {
+        "properties": {
+          "classroom_id": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Classroom Id"
+          },
+          "class_id": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Class Id"
+          },
+          "subject": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Subject"
+          },
+          "faculty_id": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Faculty Id"
+          },
+          "start_time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start Time"
+          },
+          "end_time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "End Time"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "scheduled",
+              "live",
+              "completed",
+              "cancelled"
+            ],
+            "title": "Status",
+            "default": "scheduled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "classroom_id",
+          "class_id",
+          "subject",
+          "start_time",
+          "end_time"
+        ],
+        "title": "LectureWrite"
+      },
+      "OccupancyMinuteRead": {
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          },
+          "average_occupied": {
+            "type": "number",
+            "title": "Average Occupied"
+          }
+        },
+        "type": "object",
+        "required": [
+          "timestamp",
+          "average_occupied"
+        ],
+        "title": "OccupancyMinuteRead"
+      },
+      "OutsideDurationBucket": {
+        "properties": {
+          "period_start": {
+            "type": "string",
+            "format": "date",
+            "title": "Period Start"
+          },
+          "lecture_count": {
+            "type": "integer",
+            "title": "Lecture Count"
+          },
+          "outside_minutes": {
+            "type": "number",
+            "title": "Outside Minutes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "period_start",
+          "lecture_count",
+          "outside_minutes"
+        ],
+        "title": "OutsideDurationBucket"
+      },
+      "OutsideDurationRead": {
+        "properties": {
+          "period": {
+            "type": "string",
+            "enum": [
+              "day",
+              "week",
+              "month"
+            ],
+            "title": "Period"
+          },
+          "total_outside_minutes": {
+            "type": "number",
+            "title": "Total Outside Minutes"
+          },
+          "buckets": {
+            "items": {
+              "$ref": "#/components/schemas/OutsideDurationBucket"
+            },
+            "type": "array",
+            "title": "Buckets"
+          }
+        },
+        "type": "object",
+        "required": [
+          "period",
+          "total_outside_minutes",
+          "buckets"
+        ],
+        "title": "OutsideDurationRead"
+      },
+      "PaginatedResponse_ClassRead_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ClassRead"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "PaginatedResponse[ClassRead]"
+      },
+      "PaginatedResponse_ClassroomRead_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ClassroomRead"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "PaginatedResponse[ClassroomRead]"
+      },
+      "PaginatedResponse_DepartmentRead_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DepartmentRead"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "PaginatedResponse[DepartmentRead]"
+      },
+      "PaginatedResponse_LectureRead_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LectureRead"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "PaginatedResponse[LectureRead]"
+      },
+      "PaginatedResponse_PresenceEventRead_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PresenceEventRead"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "PaginatedResponse[PresenceEventRead]"
+      },
+      "PaginatedResponse_StudentRead_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/StudentRead"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "PaginatedResponse[StudentRead]"
+      },
+      "PresenceEventRead": {
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "client_event_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Event Id"
+          },
+          "lecture_id": {
+            "type": "integer",
+            "title": "Lecture Id"
+          },
+          "classroom_id": {
+            "type": "integer",
+            "title": "Classroom Id"
+          },
+          "student_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Student Id"
+          },
+          "student_code_raw": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Student Code Raw"
+          },
+          "event_type": {
+            "type": "string",
+            "enum": [
+              "ENTRY",
+              "EXIT",
+              "RETURN",
+              "LECTURE_START",
+              "LECTURE_END",
+              "MANUAL_CORRECTION"
+            ],
+            "title": "Event Type"
+          },
+          "timestamp_utc": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp Utc"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "flagged_for_review": {
+            "type": "boolean",
+            "title": "Flagged For Review"
+          },
+          "review_status": {
+            "type": "string",
+            "title": "Review Status"
+          },
+          "presence_confirmed": {
+            "type": "boolean",
+            "title": "Presence Confirmed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created_at",
+          "id",
+          "client_event_id",
+          "lecture_id",
+          "classroom_id",
+          "student_id",
+          "student_code_raw",
+          "event_type",
+          "timestamp_utc",
+          "confidence",
+          "source",
+          "flagged_for_review",
+          "review_status",
+          "presence_confirmed"
+        ],
+        "title": "PresenceEventRead"
+      },
+      "PresenceHistoryItem": {
+        "properties": {
+          "lecture_id": {
+            "type": "integer",
+            "title": "Lecture Id"
+          },
+          "subject": {
+            "type": "string",
+            "title": "Subject"
+          },
+          "lecture_start": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Lecture Start"
+          },
+          "lecture_end": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Lecture End"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ABSENT",
+              "INSIDE",
+              "OUTSIDE",
+              "PARTIAL"
+            ],
+            "title": "Status"
+          },
+          "first_entry": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Entry"
+          },
+          "last_exit": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Exit"
+          },
+          "inside_minutes": {
+            "type": "number",
+            "title": "Inside Minutes"
+          },
+          "outside_minutes": {
+            "type": "number",
+            "title": "Outside Minutes"
+          },
+          "exit_count": {
+            "type": "integer",
+            "title": "Exit Count"
+          },
+          "return_count": {
+            "type": "integer",
+            "title": "Return Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lecture_id",
+          "subject",
+          "lecture_start",
+          "lecture_end",
+          "status",
+          "first_entry",
+          "last_exit",
+          "inside_minutes",
+          "outside_minutes",
+          "exit_count",
+          "return_count"
+        ],
+        "title": "PresenceHistoryItem"
+      },
+      "StudentRead": {
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "student_code": {
+            "type": "string",
+            "title": "Student Code"
+          },
+          "roll_no": {
+            "type": "string",
+            "title": "Roll No"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "class_id": {
+            "type": "integer",
+            "title": "Class Id"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created_at",
+          "id",
+          "student_code",
+          "roll_no",
+          "name",
+          "class_id",
+          "is_active"
+        ],
+        "title": "StudentRead"
+      },
+      "StudentWrite": {
+        "properties": {
+          "student_code": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Student Code"
+          },
+          "roll_no": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Roll No"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "class_id": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Class Id"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "student_code",
+          "roll_no",
+          "name",
+          "class_id"
+        ],
+        "title": "StudentWrite"
+      },
+      "UnusedPeriodRead": {
+        "properties": {
+          "lecture_id": {
+            "type": "integer",
+            "title": "Lecture Id"
+          },
+          "start": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "format": "date-time",
+            "title": "End"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lecture_id",
+          "start",
+          "end"
+        ],
+        "title": "UnusedPeriodRead"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}
