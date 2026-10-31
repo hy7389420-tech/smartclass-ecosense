@@ -77,7 +77,11 @@ export function decideSuggestion(suggestionId, decision) {
 }
 
 export function getReviewEvents(lectureId) {
-  const params = new URLSearchParams({ limit: '100', offset: '0' })
+  const params = new URLSearchParams({
+    lecture_id: String(lectureId),
+    limit: '100',
+    offset: '0',
+  })
   return apiRequest(`/review/events?${params}`).then((queue) => ({
     ...queue,
     items: queue.items.filter((event) => String(event.lecture_id) === String(lectureId)),

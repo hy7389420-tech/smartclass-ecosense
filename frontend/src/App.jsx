@@ -65,6 +65,7 @@ function App() {
   const [dashboard, setDashboard] = useState(null)
   const [engagement, setEngagement] = useState(null)
   const [suggestions, setSuggestions] = useState([])
+  const [suggestionsState, setSuggestionsState] = useState('loading')
   const [suggestionHistory, setSuggestionHistory] = useState([])
   const [suggestionHistoryState, setSuggestionHistoryState] = useState('loading')
   const [alerts, setAlerts] = useState([])
@@ -73,6 +74,7 @@ function App() {
   const [loading, setLoading] = useState(false)
   const [engagementState, setEngagementState] = useState('loading')
   const [reviewEvents, setReviewEvents] = useState([])
+  const [reviewState, setReviewState] = useState('loading')
   const [reviewReason, setReviewReason] = useState({})
   const dashboardRequestRef = useRef(false)
 
@@ -85,24 +87,43 @@ function App() {
     setEngagementState('loading')
     setSuggestionHistory([])
     setSuggestionHistoryState('loading')
+    setSuggestions([])
+    setSuggestionsState('loading')
     setAlerts([])
     setAlertsState('loading')
+    setReviewEvents([])
+    setReviewState('loading')
     try {
       const [dashboardData, engagementData, suggestionData, suggestionHistoryData, reviewEventsData, alertsData] = await Promise.all([
-        getDashboard(selectedId),
+        getDashboard(selectedId).catch((dashboardError) => ({
+          __error: dashboardError,
+        })),
         getEngagement(selectedId).catch((engagementError) => ({
           __error: engagementError,
         })),
-        getSuggestions(selectedId).catch(() => []),
+        getSuggestions(selectedId).catch((suggestionsError) => ({
+          __error: suggestionsError,
+        })),
         getSuggestionHistory(selectedId).catch((historyError) => ({
           __error: historyError,
         })),
-        getReviewEvents(selectedId).catch(() => ({ items: [] })),
+        getReviewEvents(selectedId).catch((reviewError) => ({
+          __error: reviewError,
+        })),
         getAlerts().catch((alertsError) => ({
           __error: alertsError,
         })),
       ])
-      setDashboard(dashboardData)
+      if (dashboardData.__error) {
+        if (dashboardData.__error.status === 401) {
+          localStorage.removeItem('ecosense_token')
+          window.location.reload()
+          return
+        }
+        setError(dashboardData.__error.message)
+      } else {
+        setDashboard(dashboardData)
+      }
       if (engagementData.__error) {
         setEngagement(null)
         setEngagementState(engagementData.__error.status === 404 ? 'no_data' : 'error')
@@ -110,7 +131,13 @@ function App() {
         setEngagement(engagementData)
         setEngagementState(engagementData.windows?.length ? 'ready' : 'no_data')
       }
-      setSuggestions(suggestionData)
+      if (suggestionData.__error) {
+        setSuggestions([])
+        setSuggestionsState('error')
+      } else {
+        setSuggestions(suggestionData)
+        setSuggestionsState(suggestionData.length ? 'ready' : 'no_data')
+      }
       if (suggestionHistoryData.__error) {
         setSuggestionHistory([])
         setSuggestionHistoryState('error')
@@ -118,7 +145,13 @@ function App() {
         setSuggestionHistory(suggestionHistoryData)
         setSuggestionHistoryState(suggestionHistoryData.length ? 'ready' : 'no_data')
       }
-      setReviewEvents(reviewEventsData.items)
+      if (reviewEventsData.__error) {
+        setReviewEvents([])
+        setReviewState('error')
+      } else {
+        setReviewEvents(reviewEventsData.items)
+        setReviewState(reviewEventsData.items.length ? 'ready' : 'no_data')
+      }
       if (alertsData.__error) {
         setAlerts([])
         setAlertsState('error')
@@ -391,7 +424,9 @@ function App() {
               <div className="panel-heading">
                 <div><p className="eyebrow">Teaching support</p><h2>Neutral suggestions</h2></div>
               </div>
-              {suggestions.length === 0 && <p className="empty-state">No suggestions for this lecture.</p>}
+              {suggestionsState === 'loading' && <p className="empty-state">Loading neutral suggestions...</p>}
+              {suggestionsState === 'error' && <p className="empty-state error-state">Neutral suggestions could not be loaded. Try refreshing.</p>}
+              {suggestionsState === 'no_data' && <p className="empty-state">No suggestions for this lecture.</p>}
               {suggestions.map((suggestion) => (
                 <div className="suggestion" key={suggestion.id}>
                   <strong>{suggestion.title}</strong>
@@ -430,59 +465,6 @@ function App() {
             </article>
           </section>
 
-          {reviewEvents.length > 0 && (
-            <article className="panel review-panel">
-              <div className="panel-heading">
-                <div><p className="eyebrow">Human review</p><h2>Events needing verification</h2></div>
-                <span className="review-count">{reviewEvents.length} event(s)</span>
-              </div>
-              <p className="review-note">
-                Review observable camera data only. Correct or resolve an event with a clear reason;
-                do not use this workflow to accuse or rank a student.
-              </p>
-              {reviewEvents.map((event) => (
-                <form className="review-item" data-review-form={event.id} key={event.id}>
-                  <div className="review-summary">
-                    <strong>{event.student_code_raw || event.student_id || 'Unknown student identity'}</strong>
-                    <span>{event.event_type} · {formatTime(event.timestamp_utc)}</span>
-                  </div>
-                  <div className="review-fields">
-                    <label>Event type
-                      <select name="event_type" defaultValue="ENTRY">
-                        <option value="ENTRY">ENTRY</option>
-                        <option value="EXIT">EXIT</option>
-                      </select>
-                    </label>
-                    <label>Timestamp
-                      <input name="timestamp" type="datetime-local" defaultValue={event.timestamp_utc.slice(0, 16)} />
-                    </label>
-                    {!event.student_id && (
-                      <label>Student ID
-                        <input name="student_id" type="number" min="1" required />
-                      </label>
-                    )}
-                    <label className="review-reason">Review reason
-                      <input
-                        name="reason"
-                        value={reviewReason[event.id] || ''}
-                        onChange={(change) => setReviewReason((current) => ({
-                          ...current,
-                          [event.id]: change.target.value,
-                        }))}
-                        maxLength="1000"
-                        required
-                      />
-                    </label>
-                  </div>
-                  <div className="decision-actions">
-                    <button type="button" onClick={() => handleCorrectReview(event.id)}>Save human correction</button>
-                    <button type="button" className="secondary-button" onClick={() => handleResolveReview(event.id)}>Resolve without correction</button>
-                  </div>
-                </form>
-              ))}
-            </article>
-          )}
-
           <article className="panel table-panel">
             <div className="panel-heading">
               <div><p className="eyebrow">Lecture {dashboard.lecture_id}</p><h2>Student presence</h2></div>
@@ -509,6 +491,59 @@ function App() {
           </article>
         </>
       )}
+      <article className="panel review-panel">
+        <div className="panel-heading">
+          <div><p className="eyebrow">Human review</p><h2>Events needing verification</h2></div>
+          {reviewState === 'ready' && <span className="review-count">{reviewEvents.length} event(s)</span>}
+        </div>
+        <p className="review-note">
+          Review observable camera data only. Correct or resolve an event with a clear reason;
+          do not use this workflow to accuse or rank a student.
+        </p>
+        {reviewState === 'loading' && <p className="empty-state">Loading review events...</p>}
+        {reviewState === 'error' && <p className="empty-state error-state">Review events could not be loaded. Try refreshing.</p>}
+        {reviewState === 'no_data' && <p className="empty-state">No events flagged for review</p>}
+        {reviewEvents.map((event) => (
+          <form className="review-item" data-review-form={event.id} key={event.id}>
+            <div className="review-summary">
+              <strong>{event.student_code_raw || event.student_id || 'Unknown student identity'}</strong>
+              <span>{event.event_type} · {formatTime(event.timestamp_utc)}</span>
+            </div>
+            <div className="review-fields">
+              <label>Event type
+                <select name="event_type" defaultValue="ENTRY">
+                  <option value="ENTRY">ENTRY</option>
+                  <option value="EXIT">EXIT</option>
+                </select>
+              </label>
+              <label>Timestamp
+                <input name="timestamp" type="datetime-local" defaultValue={event.timestamp_utc.slice(0, 16)} />
+              </label>
+              {!event.student_id && (
+                <label>Student ID
+                  <input name="student_id" type="number" min="1" required />
+                </label>
+              )}
+              <label className="review-reason">Review reason
+                <input
+                  name="reason"
+                  value={reviewReason[event.id] || ''}
+                  onChange={(change) => setReviewReason((current) => ({
+                    ...current,
+                    [event.id]: change.target.value,
+                  }))}
+                  maxLength="1000"
+                  required
+                />
+              </label>
+            </div>
+            <div className="decision-actions">
+              <button type="button" onClick={() => handleCorrectReview(event.id)}>Save human correction</button>
+              <button type="button" className="secondary-button" onClick={() => handleResolveReview(event.id)}>Resolve without correction</button>
+            </div>
+          </form>
+        ))}
+      </article>
     </div>
   )
 }
