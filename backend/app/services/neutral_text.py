@@ -12,6 +12,8 @@ BANNED_TERMS = (
     "attentive",
     "attention score",
     "emotion",
+    "understanding",
+    "intelligence",
 )
 
 

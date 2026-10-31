@@ -1,0 +1,14 @@
+.git
+.env
+**/.env
+**/.venv*/
+**/__pycache__/
+**/.pytest_cache/
+backend/data/
+backend/tests/
+cv/
+audio/
+frontend/
+docs/
+*.db
+*.sqlite*

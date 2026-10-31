@@ -63,6 +63,12 @@ def ingest_event(
         student = session.scalar(
             select(Student).where(Student.student_code == student_code)
         )
+    if student is not None and student.class_id != lecture.class_id:
+        raise ApiError(
+            422,
+            "STUDENT_CLASS_MISMATCH",
+            "Student is not enrolled in the selected lecture class.",
+        )
 
     duplicate = _find_duplicate(session, lecture_id, student, student_code, payload)
     if duplicate is not None:

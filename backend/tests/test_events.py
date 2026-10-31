@@ -130,6 +130,43 @@ def test_unknown_lecture_and_classroom_mismatch_are_rejected(
     assert response.json()["error"]["code"] == expected_code
 
 
+def test_event_student_must_be_enrolled_in_lecture_class(client, session_factory):
+    classroom, _, lecture = create_camera_context(client, session_factory)
+    department = client.get("/departments").json()["items"][0]
+    other_class = client.post(
+        "/classes",
+        json={
+            "department_id": department["id"],
+            "name": "Other Class",
+            "section": "B",
+            "year": 1,
+        },
+    ).json()
+    other_student = client.post(
+        "/students",
+        json={
+            "student_code": "OTHER_CLASS_STUDENT",
+            "roll_no": "1",
+            "name": "Other Class Student",
+            "class_id": other_class["id"],
+        },
+    ).json()
+
+    response = client.post(
+        "/events",
+        json=event_payload(
+            classroom["id"],
+            lecture["id"],
+            student_id=other_student["student_code"],
+        ),
+        headers={"X-Camera-Key": CAMERA_KEY},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "STUDENT_CLASS_MISMATCH"
+    assert client.get(f"/events?lecture_id={lecture['id']}").json()["total"] == 0
+
+
 def test_entry_exit_return_and_idempotency(client, session_factory):
     classroom, student, lecture = create_camera_context(client, session_factory)
     headers = {"X-Camera-Key": CAMERA_KEY}

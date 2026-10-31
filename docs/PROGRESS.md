@@ -4,10 +4,14 @@ Update this file at the END of every coding session (you or the AI agent).
 A new chat/agent reads this first to know where to continue.
 
 ## Current status
-- **Current phase:** CV Steps 4.1-4.6 and Steps A-F are implemented and unit tested; backend Phases 0-13 are implemented and tested.
-- **Last updated:** 2026-10-25
-- **Working right now:** Backend Phase 13 optional HOD assistant is implemented and verified; awaiting review/approval before commit or Phase 14.
-- **Next task:** Review and approve Phase 13; CV hardware validation remains pending.
+- **2026-10-30 integration fix:** Repaired the frontend authorization header, added a Vite `/api` reverse proxy to FastAPI, and started both services. Frontend build/lint pass; backend health and frontend proxy health both return HTTP 200.
+- **2026-10-30 merge/runtime fix:** Fixed expired-token handling so the frontend returns to login on HTTP 401, removed duplicate-port startup ambiguity with strict Vite port 5173, and verified backend plus `/api` proxy health.
+- **2026-10-30 login recovery:** Added an admin password-reset CLI that prompts with hidden input; frontend login now preserves the backend's invalid-credentials message instead of hiding the 401 cause.
+- **2026-10-30 frontend foundation:** React/Vite frontend created with JWT login, lecture selection, auto-refreshing presence dashboard, student table, camera-offline banner, activity estimate chart, and neutral suggestion accept/reject/ignore actions. Build verification is in progress.
+- **Current phase:** CV Steps 4.1-4.6 and Steps A-F are implemented and unit tested; backend Phases 0-15 and Week 6 Phases 1-2 (fusion and rule-based suggestions) are implemented and tested. Docker/PostgreSQL runtime checks remain unavailable.
+- **Last updated:** 2026-10-27
+- **Working right now:** Week 6 fusion and suggestion logic, sample generators, JSONL CLIs, and tests are verified. The frontend folder is absent, so the Phase 4 chart and panel were skipped. Physical camera/microphone and Docker/PostgreSQL runtime checks remain pending.
+- **Next task:** Add the frontend before attempting the chart/panel phase. Separately, run the prepared physical camera session and Docker/PostgreSQL checks when those environments are available.
 
 ## Backend status
 - [x] Phase 0: isolated backend environment, FastAPI app, `/health`, database-checking `/ready`, structured logging, setup docs, and tests.
@@ -18,17 +22,27 @@ A new chat/agent reads this first to know where to continue.
 - [x] Phase 5: idempotent lecture start/end lifecycle, finalized attendance records, live/final attendance APIs, student presence history, dashboard cards/table, review count, and recent-event camera status.
 - [x] Phase 6: pure time-weighted occupancy analytics, lecture exit/outside metrics, classroom utilization/date filtering, no-data handling, configurable utilization labels, simulated neutral suggestions, and day/week/month outside-duration aggregation.
 - [x] Phase 7: configurable exit-spike detection, same-class outside-duration trends, privacy-preserving stored insights regenerated without duplication, and an idempotent 8-lecture/60-student simulated sample.
-- [x] Phase 8: validated numeric activity-window ingestion; weighted class-level estimates with missing-signal handling, peaks, low runs and decline detection; neutral, deduplicated R1-R6 teaching suggestions.
+- [x] Phase 8: validated numeric activity-window ingestion; weighted class-level estimates with missing-signal handling, moving-average smoothing, statistically thresholded peaks, low runs and baseline/recent decline detection; neutral, evidence-backed R1-R6 teaching suggestions with append-only decision history.
 - [x] Phase 9: Argon2id password hashing, short-lived JWT login/me/change-password, immediate token revocation after password changes, generic login errors and in-process rate limiting; protected routes with ADMIN/HOD/FACULTY/STUDENT scopes; explicit nullable unique `users.student_id` mapping; secure admin provisioning; authenticated append-only suggestion decision logs.
 - [x] Phase 10: append-only manual correction events and audit snapshots; scoped review queue and resolution; camera heartbeat, offline detection and recovery; deduplicated neutral low-confidence/unusual-exit alerts; role-scoped alert resolution and ADMIN-only audit-log API.
 - [x] Phase 11: role-scoped lecture and daily/weekly reports in JSON/CSV; report estimate/limitations notes; 90-day retention preview/deletion endpoint and CLI with audit entries; retention policy documentation.
 - [x] Phase 12: exact-origin CORS validation, request body caps, per-IP rate limits, security headers, safe error envelopes/logging, production JWT secret checks, and dependency audit.
 - [x] Phase 13: off-by-default ADMIN/HOD natural-language assistant with six rule-based aggregate intents, department-scoped queries, student-data refusals, API contract, and OpenAPI export. No LLM or generated SQL is used.
-- Test result: 151 backend tests passed, including Phase 13 intent, privacy, role, scope and feature-flag checks. Ruff check/format passed for app, tests, scripts, and Alembic; `pip-audit -r requirements.txt` reported no known vulnerabilities in the Phase 12 run. OpenAPI JSON was regenerated and parsed successfully. One existing Starlette `TestClient`/httpx deprecation warning remains.
+- [x] Phase 14 backend scope: documented the CV event API/retry contract, added an append-first camera-free API simulator and JSONL replay integration test, and reject events when a known student is not enrolled in the lecture's class.
+- [x] Phase 15: added a slim non-root backend Docker image, Compose with persistent SQLite and an opt-in PostgreSQL service, a pinned Psycopg driver, fuller backend setup/environment/Docker documentation, a role-scoped API contract, and architecture notes. Docker/PostgreSQL runtime checks remain unavailable here.
+- Test result (2026-10-27): full backend `pytest` passed (162 tests, 1 existing Starlette `TestClient`/httpx deprecation warning); Ruff check and formatting passed for changed files; `pip-audit -r requirements.txt` previously found no known vulnerabilities. OpenAPI export parsed successfully (42 paths, 68 schemas).
+- Phase 15 isolated demo (2026-10-27): migrations, seed, admin login, camera provisioning, lecture lifecycle, simulator (7 accepted and 1 review-flagged), dashboard (5 students, 4 present, 2 inside, 2 outside, 1 absent, 40% occupancy, 1 pending review), insights, correction plus audit entry, report, and retention dry-run all passed against a temporary SQLite database. Temporary database and JSONL files were removed.
+- Week 6 Phases 1-2 (2026-10-27): configurable null-aware fusion, two-window default smoothing, statistical peaks/low runs/decline, a 12-window sample generator, and JSONL CLIs are implemented. R1-R6 suggestions now include numeric/time evidence, signals used, a neutral estimate note, pending status, deduplication and severity/cap ordering. Focused suggestion/activity tests passed (16); full backend suite passed (162). The sample suggestion CLI returned R1, R3 and R5. Existing decision API/storage was preserved with a compatibility mapping for persisted severity values. Frontend chart/panel and LLM wording were skipped because `frontend/` is absent.
+- CV Step 4.5b validation: focused sender tests passed (17); `cv/tests` passed (71); full `cv/tests` plus `audio/tests` passed (84). Ruff check/format and Pylance syntax checks passed. A controlled local API test delivered and verified one event through the sender. Physical camera-to-backend validation has not been run.
+- End-to-end simulator demo (2026-10-25): upgraded the local database to Alembic head, ran the idempotent seed, created a current-time scheduled lecture and temporary camera/admin credentials, then ran `scripts.simulate`. The API accepted 8 events and stored 1 `UNKNOWN` event for review. Authenticated `GET /dashboard/2` returned total=5, present=4, inside=2, outside=2, absent=1, occupancy=40%, pending_review_count=1. Swagger `/docs` loaded with the dashboard route. Temporary admin and camera credentials were removed; the completed demo lecture and event data remain in the local database, and the JSONL stream remains in `backend/data/simulated_events.jsonl`.
+- CV Step 4.5b (2026-10-25): append-first JSONL outbox sender with background HTTP delivery, `.env` configuration, retry/checkpoint behavior, tests, and controlled local API verification.
+- Live camera setup (2026-10-27): created root `.env` from `.env.example` with the camera key held only in `.env`; created admin and camera for classroom 1; verified five active demo students are enrolled in class 1; created and started lecture 4 for the current time. Waiting for the user to run the physical webcam test. Do not copy the camera key into chat or terminal commands.
 - Known tooling warning: Starlette's TestClient currently warns that its `httpx` integration is deprecated; tests still pass.
 - Auth limitation: login rate limiting is process-local and keyed by client IP; multi-worker/production deployments need a shared limiter. Blank development JWT secrets are generated per process; configure a strong `JWT_SECRET_KEY` in production.
 - Phase 12 limitation: global/auth/event rate limits are process-local and use direct client IP; reverse-proxy deployments need infrastructure controls or trusted-proxy handling. No penetration or load test was run.
 - Phase 13 limitation: the assistant is deterministic intent matching, not an LLM; it supports only the six documented aggregate questions, and date ranges use `LOCAL_TIMEZONE`. Answers depend on the completeness of stored finalized events and attendance data.
+- Phase 14/4.5b limitation: CV now has append-first event delivery with a persistent local archive and checkpoint; the local API path was verified with a synthetic event, but physical camera/microphone validation remains pending. Delivery retries are bounded per cycle; events remain available for replay.
+- Phase 15 limitation: Docker, Docker Compose, PostgreSQL, and `psql` are unavailable in this environment. The Compose YAML parses, but image build, container startup, PostgreSQL connection, and PostgreSQL Alembic migration have not been tested. The Psycopg requirement is declared, but its local package download timed out; SQLite tests and demo do not require it. SQLite-specific connection settings and Alembic batch rendering are explicitly guarded; static search is not proof of full PostgreSQL compatibility.
 - Mapping decision: legacy accounts stay `student_id=NULL`; no email/name matching is performed. HOD department scope uses the department on the HOD's linked `faculty` profile; missing scope mappings are denied.
 - Phase 10 correction provenance: keep the flagged source row unchanged except its review status; append a linked `MANUAL_CORRECTION` row whose effective `correction_event_type` participates in presence/analytics. Every review and alert resolution records actor, reason, and before/after values.
 - Camera health thresholds: `CAMERA_OFFLINE_SECONDS=120`; low-confidence and unusual-exit alerts default to 3 events in a 5-minute window. Alert refresh is performed on `GET /alerts` and camera heartbeats; no background scheduler is configured.
@@ -55,11 +69,11 @@ A new chat/agent reads this first to know where to continue.
 - [x] CV Step F: `python -m cv.session` orchestrates camera, CV features, microphone, and clean shutdown
 
 ## In progress
-- Step 4.5b backend event delivery remains pending.
+- Phase 15 approval; Docker/PostgreSQL runtime validation needs an environment with those tools. Physical CV camera/microphone testing also remains pending.
 
 ## Next (in order)
 1. [ ] Manually validate the integrated camera/microphone session
-2. [ ] Step 4.5b: send CV events to the backend (PENDING)
+2. [ ] Run the Docker image and optional PostgreSQL migration/API checks when the required runtime is available
 
 ## Known bugs / issues
 - Fixed: duplicate microphone chunk timestamps could trigger a crash in the audio window aggregator during `cv.session` shutdown. This was caused by multiple audio chunks arriving at the same `time.monotonic()` timestamp. The fix keeps them sorted and non-decreasing without inventing fake data.
@@ -93,6 +107,8 @@ A new chat/agent reads this first to know where to continue.
 |---|---|---|
 | (date) | Created context files | docs: add project context files |
 | 2026-10-25 | Backend Phase 9 authentication, role scopes, student mapping, and decision logs | feat(backend): add auth and role-based access |
+| 2026-10-25 | Backend Phase 14 CV integration contract, simulator, replay tests, and live API/dashboard demo | Not committed |
+| 2026-10-27 | Prepared `.env`, admin, camera and live lecture for physical CV validation; awaiting webcam run | Not committed |
 
 ## Notes for the next session
 - Read AGENTS.md, ROADMAP.md and ARCHITECTURE.md first.
@@ -109,4 +125,4 @@ A new chat/agent reads this first to know where to continue.
 - Step 4.6 manual identity mapping implemented: click a visible person box, then press 1-5 to map the track ID to a demo student; unknown IDs are review-flagged in JSONL.
 - Fixed repeated ENTRY/EXIT events caused by line-side jitter: the line counter now uses a configurable hysteresis band while preserving the 2-second cooldown.
 - User confirmed CV module Steps 4.1-4.6 are complete and tested.
-- Next CV task: Step 4.5b backend event delivery (PENDING).
+- Next CV task: run the prepared live camera/microphone session and verify its generated events; synthetic Step 4.5b API delivery is implemented and tested.

@@ -11,7 +11,7 @@ From the repository root:
 py -3.12 -m venv backend\.venv-backend
 backend\.venv-backend\Scripts\python.exe -m pip install --upgrade pip
 backend\.venv-backend\Scripts\python.exe -m pip install -r backend\requirements.txt
-Copy-Item backend\.env.example backend\.env
+if (-not (Test-Path backend\.env)) { Copy-Item backend\.env.example backend\.env }
 ```
 
 ## Run the API
@@ -29,6 +29,12 @@ Set-Location backend
 query and returns HTTP 503 with a safe error message if the database is
 unavailable.
 
+To regenerate the checked-in OpenAPI schema from the backend directory:
+
+```powershell
+.\.venv-backend\Scripts\python.exe -c "import json; from pathlib import Path; from app.main import app; Path(r'..\docs\api\openapi.json').write_text(json.dumps(app.openapi(), indent=2) + '\n', encoding='utf-8')"
+```
+
 ## Test and lint
 
 From the repository root:
@@ -41,7 +47,91 @@ Set-Location backend
 ```
 
 Configuration is read from environment variables and `backend/.env`. Never put
-real credentials or secrets in `.env.example`.
+real credentials or secrets in `.env.example`. The complete backend variable
+inventory is kept in [`backend/.env.example`](./.env.example); the root
+[`.env.example`](../.env.example) also has optional Docker Compose database
+settings.
+
+## Docker and optional PostgreSQL
+
+Docker Compose runs the API as a non-root user and persists its default SQLite
+database in a named volume. The PostgreSQL service is opt-in and has a separate
+persistent volume. The root CV camera key is not passed to the API container.
+
+From the repository root, prepare the two local configuration files:
+
+```powershell
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+if (-not (Test-Path backend\.env)) { Copy-Item backend\.env.example backend\.env }
+```
+
+For the default SQLite setup:
+
+```powershell
+docker compose up --build -d backend
+docker compose ps
+docker compose logs backend
+```
+
+The API is bound to `127.0.0.1:8000`; `/ready` is the container health check.
+Migrations run before Uvicorn starts. The `backend_data` volume survives
+`docker compose down`; `docker compose down --volumes` permanently deletes
+both database volumes.
+
+To opt into PostgreSQL, set a unique `POSTGRES_PASSWORD` and the matching
+`DATABASE_URL` in the root `.env` (URL-encode any special password characters):
+
+```text
+POSTGRES_PASSWORD=<local-secret>
+DATABASE_URL=postgresql+psycopg://ecosense:<local-secret>@postgres:5432/ecosense
+```
+
+Start PostgreSQL and wait until it is healthy before starting the API:
+
+```powershell
+docker compose --profile postgres up -d postgres
+docker compose ps
+docker compose up --build -d backend
+```
+
+The PostgreSQL port is not published to the host. The Compose profile and
+driver are provided for PostgreSQL configuration, but a PostgreSQL server,
+Docker image build, and PostgreSQL migration run were not available to verify
+in this environment. SQLite remains the locally tested database; don't treat
+PostgreSQL compatibility as runtime-certified until that check is run.
+SQLite-specific setup currently includes `check_same_thread=False` and
+`PRAGMA foreign_keys=ON` in the SQLite engine path, plus Alembic batch rendering
+for SQLite migrations. A source scan found no other obvious SQLite-only SQL,
+but that is not proof of PostgreSQL runtime compatibility.
+
+Compose reads backend application settings from `backend/.env`; its
+`DATABASE_URL` is overridden by the root `.env` value or the Compose SQLite
+default above. The root `.env` is used only for Compose interpolation and is
+not mounted into the API container.
+
+## Environment variables
+
+Use `backend/.env.example` as the complete variable-name and default-value
+reference. Important runtime settings are:
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `APP_ENV` | `development` | Application mode; production applies stricter checks |
+| `LOG_LEVEL` | `INFO` | Application logging threshold |
+| `DATABASE_URL` | `sqlite:///./ecosense.db` locally | SQLAlchemy URL; Compose uses a named-volume SQLite path unless overridden |
+| `JWT_SECRET_KEY` | Blank in template | Required strong secret in production; development generates a process-local value |
+| `CORS_ALLOWED_ORIGINS` | Local Vite origins | Exact browser origins, comma-separated |
+| `LOCAL_TIMEZONE` | `Asia/Kolkata` | Local date boundaries and naive timestamp interpretation |
+| `REQUIRE_CAMERA_KEY` | `true` | Require registered camera credentials for event ingestion |
+| `MAX_REQUEST_BODY_BYTES` | `1048576` | Request size ceiling |
+| `REQUEST_RATE_LIMIT_REQUESTS` / `REQUEST_RATE_LIMIT_WINDOW_SECONDS` | `120` / `60` | In-process global request limit |
+| `RETENTION_DAYS` | `90` | Default data-retention horizon |
+| `AI_ASSISTANT_ENABLED` | `false` | Feature flag for the aggregate HOD assistant |
+
+Other environment variables and their defaults cover login/event limits,
+camera health, simulator retries, analytics thresholds, alert thresholds, and
+activity-estimate weights and cutoffs. Set them in `backend/.env`; they are
+validated by application settings at startup.
 
 ## Database
 
@@ -70,7 +160,7 @@ Set-Location backend
 The script prompts for a password unless `ADMIN_PASSWORD` is provided through
 the environment. Passwords must be 12 to 128 characters; no default password
 is used. Sign in at `POST /auth/login` to receive a 15-minute bearer token.
-Send it as `Authorization: Bearer <token>` to protected APIs. `/health`,
+Send it as `Authorization: Bearer <access_token>` to protected APIs. `/health`,
 `/ready`, `/auth/login`, and camera-key-authenticated event ingestion remain
 available without a user token.
 
@@ -205,6 +295,29 @@ uses the same validation and event service as the API, and commits the file as
 one transaction. A malformed or invalid line reports its line number and
 rolls back the import.
 
+For an API-level camera-free simulation, start a lecture and send a realistic
+stream through `POST /events/batch`. At least four student codes from the
+selected class are required:
+
+```powershell
+.\.venv-backend\Scripts\python.exe -m scripts.simulate `
+  --classroom-id 1 `
+  --lecture-id 12 `
+  --lecture-start "2026-10-25T10:00:00+05:30" `
+  --duration-minutes 60 `
+  --student-codes "STUDENT_A,STUDENT_B,STUDENT_C,STUDENT_D,STUDENT_E"
+```
+
+The first four codes simulate normal presence, one exit, multiple exits with a
+derived return, and absence; extra codes receive normal-entry events. An
+additional `UNKNOWN` event is flagged for review. The simulator writes to
+`data/simulated_events.jsonl` before sending, prompts securely for a camera key
+unless `ECOSENSE_CAMERA_KEY` is set, and retries transient failures using
+`SIMULATOR_*` settings. See [CV_INTEGRATION.md](../docs/CV_INTEGRATION.md) for
+the full payload, response and offline-queue contract. The CV sender now
+appends locally before posting and keeps pending events available across backend
+outages. Physical camera-to-backend validation remains pending.
+
 Event-ingestion settings in `backend/.env`:
 
 | Variable | Default | Purpose |
@@ -212,6 +325,9 @@ Event-ingestion settings in `backend/.env`:
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | Exact allowed browser origins; comma-separated |
 | `MAX_REQUEST_BODY_BYTES` | `1048576` | Maximum request body size (1 MiB) |
 | `REQUEST_RATE_LIMIT_REQUESTS` / `REQUEST_RATE_LIMIT_WINDOW_SECONDS` | `120` / `60` | Global per-IP in-memory request limit |
+| `SIMULATOR_REQUEST_TIMEOUT_SECONDS` | `10` | API simulator request timeout |
+| `SIMULATOR_RETRY_ATTEMPTS` | `3` | Bounded API simulator retries after the first attempt |
+| `SIMULATOR_RETRY_BACKOFF_SECONDS` | `1` | Base exponential delay for transient API failures |
 | `AUTH_RATE_LIMIT_REQUESTS` | `30` | Additional `/auth/*` per-IP limit per configured request window |
 | `EVENT_RATE_LIMIT_REQUESTS` | `30` | Additional `/events*` per-IP limit per configured request window |
 | `REQUIRE_CAMERA_KEY` | `true` | Require a registered camera key |
@@ -229,9 +345,9 @@ Event-ingestion settings in `backend/.env`:
 | `INSIGHT_HISTORY_LECTURES` | `5` | Maximum prior lectures considered for trend comparison |
 | `ACTIVITY_MAX_BATCH_SIZE` | `100` | Maximum windows accepted per `POST /activity` request |
 | `ACTIVITY_MIN_WINDOW_SECONDS` / `ACTIVITY_MAX_WINDOW_SECONDS` | `1` / `300` | Accepted activity window duration |
-| `ACTIVITY_MOVEMENT_MIN/MAX`, `ACTIVITY_FRONT_MIN/MAX`, `ACTIVITY_VOICE_MIN/MAX` | `0` / `1` | Normalization ranges for ratio signals |
+| `ACTIVITY_MOVEMENT_MIN` / `ACTIVITY_MOVEMENT_MAX`, `ACTIVITY_FRONT_MIN` / `ACTIVITY_FRONT_MAX`, `ACTIVITY_VOICE_MIN` / `ACTIVITY_VOICE_MAX` | `0` / `1` | Normalization ranges for ratio signals |
 | `ACTIVITY_AUDIO_MIN_DBFS` / `ACTIVITY_AUDIO_MAX_DBFS` | `-120` / `0` | Audio level normalization range |
-| `ACTIVITY_*_WEIGHT` | `0.30`, `0.20`, `0.20`, `0.20`, `0.10` | Movement, inactivity, head-front, voice, audio signal weights |
+| `ACTIVITY_MOVEMENT_WEIGHT` / `ACTIVITY_INACTIVITY_WEIGHT` / `ACTIVITY_HEAD_WEIGHT` / `ACTIVITY_VOICE_WEIGHT` / `ACTIVITY_AUDIO_WEIGHT` | `0.30`, `0.20`, `0.20`, `0.20`, `0.10` | Movement, inactivity, head-front, voice, audio signal weights |
 | `ACTIVITY_MIN_SIGNALS` | `2` | Signals required to calculate an estimate |
 | `ACTIVITY_LOW_CUTOFF` / `ACTIVITY_HIGH_CUTOFF` | `0.35` / `0.65` | Estimate label boundaries |
 | `ACTIVITY_LOW_RUN_WINDOWS` / `ACTIVITY_PEAK_COUNT` | `3` / `3` | Low-run minimum and returned peak count |

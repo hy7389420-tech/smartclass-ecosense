@@ -1,7 +1,11 @@
+import argparse
+import json
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass, replace
 from datetime import datetime
 from math import isfinite
+from pathlib import Path
+from statistics import fmean, pstdev
 from typing import Literal
 
 SignalName = Literal[
@@ -45,9 +49,11 @@ class FusionConfig:
     low_cutoff: float
     high_cutoff: float
     low_run_windows: int
-    peak_count: int
+    smoothing_windows: int
+    min_windows_for_stats: int
+    peak_z: float
     decline_last_windows: int
-    decline_min_windows: int
+    decline_min_baseline_windows: int
     decline_threshold: float
 
 
@@ -107,22 +113,28 @@ class EngagementSummary:
 def analyze_activity(
     windows: Sequence[ActivitySignals], config: FusionConfig
 ) -> EngagementSummary:
+    _validate_config(config)
     ordered_windows = sorted(windows, key=lambda item: item.window_start)
-    fused = tuple(_fuse_window(window, config) for window in ordered_windows)
+    fused = _smooth_windows(
+        tuple(_fuse_window(window, config) for window in ordered_windows),
+        config.smoothing_windows,
+        config.low_cutoff,
+        config.high_cutoff,
+    )
     valid = [window for window in fused if window.estimate is not None]
     estimates = [window.estimate for window in valid if window.estimate is not None]
     average = sum(estimates) / len(estimates) if estimates else None
-    peaks = tuple(
-        ActivityPeak(window_start, estimate)
-        for window_start, estimate in _top_estimates(valid, config.peak_count)
-    )
+    peaks = _find_peaks(valid, config)
     low_runs = _low_activity_runs(fused, config.low_run_windows)
     decline = _analyze_decline(valid, config)
 
     peak_estimate: float | None = None
     recent_estimate: float | None = None
     peak_drop_detected = False
-    if len(valid) >= config.decline_min_windows:
+    minimum_decline_windows = (
+        config.decline_last_windows + config.decline_min_baseline_windows
+    )
+    if len(valid) >= minimum_decline_windows:
         earlier = valid[: -config.decline_last_windows]
         recent = valid[-config.decline_last_windows :]
         earlier_values = [
@@ -240,13 +252,7 @@ def _fuse_window(window: ActivitySignals, config: FusionConfig) -> FusedActivity
         )
     weight_total = sum(weight for _, _, weight in available)
     estimate = sum(value * weight for _, value, weight in available) / weight_total
-    label: EstimateLabel
-    if estimate < config.low_cutoff:
-        label = "low"
-    elif estimate >= config.high_cutoff:
-        label = "high"
-    else:
-        label = "medium"
+    label = _estimate_label(estimate, config.low_cutoff, config.high_cutoff)
     return FusedActivityWindow(
         window_start=window.window_start,
         window_end=window.window_end,
@@ -270,18 +276,128 @@ def _normalize(value: float | None, minimum: float, maximum: float) -> float | N
     return min(max((value - minimum) / (maximum - minimum), 0), 1)
 
 
-def _top_estimates(
-    windows: Sequence[FusedActivityWindow], peak_count: int
-) -> list[tuple[datetime, float]]:
-    ranked = sorted(
-        (
-            (window.window_start, window.estimate)
-            for window in windows
-            if window.estimate is not None
-        ),
-        key=lambda item: (-item[1], item[0]),
+def _validate_config(config: FusionConfig) -> None:
+    numeric_values = (
+        config.movement_weight,
+        config.inactivity_weight,
+        config.head_weight,
+        config.voice_weight,
+        config.audio_weight,
+        config.movement_min,
+        config.movement_max,
+        config.front_min,
+        config.front_max,
+        config.voice_min,
+        config.voice_max,
+        config.audio_min_dbfs,
+        config.audio_max_dbfs,
+        config.low_cutoff,
+        config.high_cutoff,
+        config.peak_z,
+        config.decline_threshold,
     )
-    return ranked[:peak_count]
+    if not all(isfinite(value) for value in numeric_values):
+        raise ValueError("Fusion settings must contain only finite numbers.")
+    if (
+        min(
+            config.movement_weight,
+            config.inactivity_weight,
+            config.head_weight,
+            config.voice_weight,
+            config.audio_weight,
+        )
+        < 0
+    ):
+        raise ValueError("Fusion signal weights cannot be negative.")
+    if (
+        sum(
+            (
+                config.movement_weight,
+                config.inactivity_weight,
+                config.head_weight,
+                config.voice_weight,
+                config.audio_weight,
+            )
+        )
+        <= 0
+    ):
+        raise ValueError("At least one fusion signal weight must be positive.")
+    if config.min_signals < 1:
+        raise ValueError("min_signals must be at least one.")
+    if config.low_cutoff < 0 or config.high_cutoff > 1:
+        raise ValueError("Activity cutoffs must be within 0 and 1.")
+    if config.low_cutoff >= config.high_cutoff:
+        raise ValueError("high_cutoff must exceed low_cutoff.")
+    if config.smoothing_windows < 1:
+        raise ValueError("smoothing_windows must be at least one.")
+    if config.min_windows_for_stats < 2:
+        raise ValueError("min_windows_for_stats must be at least two.")
+    if config.peak_z < 0:
+        raise ValueError("peak_z cannot be negative.")
+    if config.decline_last_windows < 1 or config.decline_min_baseline_windows < 1:
+        raise ValueError("Decline analysis requires recent and baseline windows.")
+    if config.low_run_windows < 1:
+        raise ValueError("low_run_windows must be at least one.")
+
+
+def _smooth_windows(
+    windows: Sequence[FusedActivityWindow],
+    smoothing_windows: int,
+    low_cutoff: float,
+    high_cutoff: float,
+) -> tuple[FusedActivityWindow, ...]:
+    if smoothing_windows == 1:
+        return tuple(windows)
+
+    smoothed: list[FusedActivityWindow] = []
+    recent_values: list[float] = []
+    previous_end: datetime | None = None
+    for window in windows:
+        if window.estimate is None:
+            recent_values.clear()
+            previous_end = None
+            smoothed.append(window)
+            continue
+        if previous_end != window.window_start:
+            recent_values.clear()
+        recent_values.append(window.estimate)
+        del recent_values[:-smoothing_windows]
+        estimate = round(fmean(recent_values), 4)
+        smoothed.append(
+            replace(
+                window,
+                estimate=estimate,
+                label=_estimate_label(estimate, low_cutoff, high_cutoff),
+            )
+        )
+        previous_end = window.window_end
+    return tuple(smoothed)
+
+
+def _estimate_label(
+    estimate: float, low_cutoff: float, high_cutoff: float
+) -> EstimateLabel:
+    if estimate < low_cutoff:
+        return "low"
+    if estimate >= high_cutoff:
+        return "high"
+    return "medium"
+
+
+def _find_peaks(
+    windows: Sequence[FusedActivityWindow], config: FusionConfig
+) -> tuple[ActivityPeak, ...]:
+    estimates = [window.estimate for window in windows if window.estimate is not None]
+    if len(estimates) < config.min_windows_for_stats:
+        return ()
+    threshold = fmean(estimates) + config.peak_z * pstdev(estimates)
+    return tuple(
+        ActivityPeak(window.window_start, window.estimate)
+        for window in windows
+        if window.estimate is not None
+        and window.estimate >= threshold
+        and window.estimate > config.high_cutoff
+    )
 
 
 def _low_activity_runs(
@@ -321,7 +437,8 @@ def _low_activity_runs(
 def _analyze_decline(
     windows: Sequence[FusedActivityWindow], config: FusionConfig
 ) -> DeclineAnalysis:
-    if len(windows) < config.decline_min_windows:
+    minimum_windows = config.decline_last_windows + config.decline_min_baseline_windows
+    if len(windows) < minimum_windows:
         return DeclineAnalysis("insufficient_data", None, None, None)
     earlier = [
         window.estimate
@@ -344,3 +461,97 @@ def _analyze_decline(
         recent_estimate=round(recent_average, 4),
         drop=round(drop, 4),
     )
+
+
+def load_activity_windows(path: Path) -> list[ActivitySignals]:
+    windows: list[ActivitySignals] = []
+    with path.open(encoding="utf-8") as file:
+        for line_number, line in enumerate(file, start=1):
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+                if not isinstance(record, dict):
+                    raise TypeError("each JSONL record must be an object")
+                windows.append(
+                    ActivitySignals(
+                        window_start=_parse_datetime(record["window_start"]),
+                        window_end=_parse_datetime(record["window_end"]),
+                        movement_level=record.get("movement_level"),
+                        inactivity_seconds=record.get("inactivity_seconds"),
+                        front_facing_ratio=record.get("front_facing_ratio"),
+                        audio_level_db_mean=record.get("audio_level_db_mean"),
+                        voice_activity_ratio=record.get("voice_activity_ratio"),
+                    )
+                )
+            except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+                raise ValueError(
+                    f"{path}:{line_number}: invalid activity window: {error}"
+                ) from error
+    return windows
+
+
+def _parse_datetime(value: object) -> datetime:
+    if not isinstance(value, str):
+        raise TypeError("timestamps must be ISO-formatted strings")
+    return datetime.fromisoformat(value)
+
+
+def fusion_config_from_settings() -> FusionConfig:
+    from app.config import get_settings
+
+    settings = get_settings()
+    return FusionConfig(
+        movement_weight=settings.activity_movement_weight,
+        inactivity_weight=settings.activity_inactivity_weight,
+        head_weight=settings.activity_head_weight,
+        voice_weight=settings.activity_voice_weight,
+        audio_weight=settings.activity_audio_weight,
+        movement_min=settings.activity_movement_min,
+        movement_max=settings.activity_movement_max,
+        front_min=settings.activity_front_min,
+        front_max=settings.activity_front_max,
+        voice_min=settings.activity_voice_min,
+        voice_max=settings.activity_voice_max,
+        audio_min_dbfs=settings.activity_audio_min_dbfs,
+        audio_max_dbfs=settings.activity_audio_max_dbfs,
+        min_signals=settings.activity_min_signals,
+        low_cutoff=settings.activity_low_cutoff,
+        high_cutoff=settings.activity_high_cutoff,
+        low_run_windows=settings.activity_low_run_windows,
+        smoothing_windows=settings.activity_smoothing_windows,
+        min_windows_for_stats=settings.activity_min_windows_for_stats,
+        peak_z=settings.activity_peak_z,
+        decline_last_windows=settings.activity_decline_last_windows,
+        decline_min_baseline_windows=(settings.activity_decline_min_baseline_windows),
+        decline_threshold=settings.activity_decline_threshold,
+    )
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        description="Fuse aggregate activity windows and print timeline findings."
+    )
+    parser.add_argument("jsonl_path", type=Path)
+    args = parser.parse_args(argv)
+    try:
+        summary = analyze_activity(
+            load_activity_windows(args.jsonl_path),
+            fusion_config_from_settings(),
+        )
+    except (OSError, ValueError) as error:
+        parser.error(str(error))
+    print(
+        json.dumps(
+            asdict(summary),
+            default=lambda value: (
+                value.isoformat() if isinstance(value, datetime) else str(value)
+            ),
+            indent=2,
+        )
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

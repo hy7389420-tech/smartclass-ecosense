@@ -17,6 +17,16 @@ The generated schema is available at [openapi.json](./api/openapi.json).
   return `409`. Invalid payloads or query parameters return `422`.
 - Errors use `{ "error": { "code": "...", "message": "..." } }`. Internal
   database details are not returned.
+- Example error body:
+
+  ```json
+  {
+    "error": {
+      "code": "EVENT_NOT_FOUND",
+      "message": "Event was not found."
+    }
+  }
+  ```
 - Request bodies larger than `MAX_REQUEST_BODY_BYTES` return `413`.
   Rate-limited requests return `429` with a `Retry-After` header. HTTP and
   unexpected server errors use the same safe error envelope.
@@ -60,6 +70,34 @@ The generated schema is available at [openapi.json](./api/openapi.json).
 | Activity | `POST /activity` | - | - | - | - |
 | Engagement | - | `GET /lectures/{id}/engagement`; `GET /lectures/{id}/suggestions` | - | - | - |
 | HOD assistant | `POST /ai/ask` | - | - | - | - |
+
+### Authentication and role matrix
+
+The role checks below are enforced by the API, in addition to object-level
+scope checks. A role listed for a read route does not grant access to another
+department, class, lecture, or student's private record.
+
+| Endpoint group | Allowed caller | Scope / notes |
+|---|---|---|
+| `GET /health`, `GET /ready`, `POST /auth/login` | Public | Readiness checks database availability; login returns a short-lived JWT |
+| `GET /auth/me`, `POST /auth/change-password` | Any authenticated role | Current user's own account only |
+| Read departments | ADMIN, HOD, FACULTY | HOD/FACULTY department scope is enforced |
+| Read classes, classrooms, students, and lecture catalog | ADMIN, HOD, FACULTY, STUDENT | Object-level class/department scope; STUDENT sees only their mapped record |
+| Read finalized lecture attendance and operational dashboards | ADMIN, HOD, FACULTY | Restricted to accessible lectures |
+| Read a student's presence history; read events and reports | ADMIN, HOD, FACULTY, STUDENT | Role-scoped; STUDENT gets only their own record |
+| Create/update/delete departments, classes, classrooms, and students | ADMIN | Catalog administration |
+| Create/update/delete lecture catalog records | ADMIN | Use lifecycle endpoints to start/end lectures |
+| Start/end a lecture | ADMIN, HOD, FACULTY | Restricted to permitted lecture scope |
+| `POST /events`, `POST /events/batch`, `POST /cameras/{id}/heartbeat` | Registered camera key | `X-Camera-Key`; these machine-authenticated routes do not use a user JWT |
+| Correct events; review queue and resolution; analytics, insights, alerts, engagement and suggestion reads | ADMIN, HOD, FACULTY | Scoped to accessible lectures/classes |
+| `POST /activity` | ADMIN, FACULTY | Faculty must be assigned to the lecture |
+| `POST /suggestions/{id}/decision` | ADMIN, FACULTY | Faculty must have access to the suggestion's lecture |
+| `GET /audit-logs`, `POST /admin/retention/run` | ADMIN | Audit records are read-only; retention defaults to dry-run |
+| `POST /ai/ask` | ADMIN, HOD | Feature-flagged; aggregate-only and department-scoped |
+
+An unmapped STUDENT account is denied student-data access with `403`; identity
+is never inferred from email or name. Staff access is checked against the
+requested object's scope, so knowing an ID does not bypass authorization.
 
 ### Optional HOD assistant
 
@@ -138,7 +176,7 @@ false` to delete:
 
 ```http
 POST /admin/retention/run
-Authorization: Bearer <admin-token>
+Authorization: Bearer <access_token>
 Content-Type: application/json
 ```
 
@@ -202,7 +240,10 @@ unconfirmed presence, low confidence, timestamps within the configured grace
 period but outside lecture hours, and invalid sequences are stored with
 `flagged_for_review=true` and `review_status="needs_review"`; flagged events
 are excluded from presence calculations. Events outside the grace window,
-unknown lectures, and classroom/lecture mismatches are rejected.
+unknown lectures, classroom/lecture mismatches, and known students not
+enrolled in the lecture's class are rejected. See the
+[CV integration contract](./CV_INTEGRATION.md) for delivery and offline-retry
+guidance.
 
 | Outcome | Status |
 |---|---:|
@@ -212,7 +253,7 @@ unknown lectures, and classroom/lecture mismatches are rejected.
 | Missing/invalid camera key | `401` |
 | Camera assigned to a different classroom | `403` |
 | Unknown lecture | `404` |
-| Invalid event, classroom mismatch, or batch size | `422` |
+| Invalid event, classroom mismatch, cross-class student, or batch size | `422` |
 
 `POST /events/batch` accepts a non-empty JSON array with at most
 `MAX_EVENT_BATCH_SIZE` items (default `100`, configurable up to `1000`). The
@@ -384,7 +425,11 @@ response includes the limitation note `"estimate based on observable
 indicators"`. Each available signal is normalized and its configured weight
 renormalized across available signals; a window with fewer than
 `ACTIVITY_MIN_SIGNALS` (default `2`) is marked `insufficient_data`. Inactivity
-is inverted as a ratio of the window duration. The default weights are
+is inverted as a ratio of the window duration. A trailing moving average is
+applied over `ACTIVITY_SMOOTHING_WINDOWS` (default `2`); set it to `1` to
+disable smoothing. Peaks require at least `ACTIVITY_MIN_WINDOWS_FOR_STATS`
+(default `3`) valid windows and must exceed both the configured `ACTIVITY_PEAK_Z`
+standard-deviation threshold (default `1.0`) and the high cutoff. The default weights are
 movement `0.30`, inactivity `0.20`, front-facing `0.20`, voice activity
 `0.20`, and audio level `0.10`. No smoothing is applied in this version.
 Response metrics also include available and insufficient window counts,

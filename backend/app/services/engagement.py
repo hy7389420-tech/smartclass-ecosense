@@ -26,8 +26,8 @@ from app.services.fusion import (
     analyze_activity,
 )
 from app.services.suggestions import (
-    SuggestionConfig,
     generate_suggestions,
+    suggestion_config_from_settings,
 )
 
 ESTIMATE_NOTE = "estimate based on observable indicators"
@@ -156,7 +156,10 @@ def get_lecture_engagement(session: Session, lecture_id: int) -> EngagementRead:
 
 def get_lecture_suggestions(session: Session, lecture_id: int) -> list[SuggestionRead]:
     _, summary = _get_activity_summary(session, lecture_id)
-    proposals = generate_suggestions(summary, _suggestion_config(get_settings()))
+    proposals = generate_suggestions(
+        summary,
+        suggestion_config_from_settings(get_settings()),
+    )
     if not proposals:
         return []
 
@@ -173,9 +176,13 @@ def get_lecture_suggestions(session: Session, lecture_id: int) -> list[Suggestio
                 rule_id=proposal.rule_id,
                 title=proposal.title,
                 text=proposal.text,
-                evidence_json=proposal.evidence,
-                severity=proposal.severity,
-                status="pending",
+                evidence_json={
+                    **proposal.evidence,
+                    "signals_used": list(proposal.signals_used),
+                    "estimate_note": proposal.estimate_note,
+                },
+                severity={"info": "low", "consider": "medium"}[proposal.severity],
+                status=proposal.status,
             )
             session.add(row)
         result.append(row)
@@ -233,21 +240,12 @@ def _fusion_config(settings: Settings) -> FusionConfig:
         low_cutoff=settings.activity_low_cutoff,
         high_cutoff=settings.activity_high_cutoff,
         low_run_windows=settings.activity_low_run_windows,
-        peak_count=settings.activity_peak_count,
+        smoothing_windows=settings.activity_smoothing_windows,
+        min_windows_for_stats=settings.activity_min_windows_for_stats,
+        peak_z=settings.activity_peak_z,
         decline_last_windows=settings.activity_decline_last_windows,
-        decline_min_windows=settings.activity_decline_min_windows,
+        decline_min_baseline_windows=settings.activity_decline_min_baseline_windows,
         decline_threshold=settings.activity_decline_threshold,
-    )
-
-
-def _suggestion_config(settings: Settings) -> SuggestionConfig:
-    return SuggestionConfig(
-        low_run_windows=settings.activity_low_run_windows,
-        voice_low_threshold=settings.activity_voice_low_threshold,
-        voice_min_windows=settings.activity_voice_min_windows,
-        movement_spike_threshold=settings.activity_movement_spike_threshold,
-        noise_threshold_dbfs=settings.activity_noise_threshold_dbfs,
-        max_suggestions=settings.activity_max_suggestions,
     )
 
 

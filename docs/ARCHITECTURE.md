@@ -21,6 +21,8 @@ Database (SQLite for MVP, PostgreSQL later)
         |
         +--> Analytics (occupancy, utilization)
         +--> Insights (rule-based, optional LLM summary)
+        +--> Aggregate Activity Fusion -> R1-R6 Suggestions
+                -> Teacher Decision Log (append-only history)
         |
         v
 Dashboard (React)
@@ -28,6 +30,11 @@ Dashboard (React)
 
 MVP uses the **simulator** instead of the camera. The rest of the flow stays the same,
 so the camera can be plugged in later without changing the backend.
+
+The aggregate activity path stores numeric time windows, fuses only available
+signals into a class-level observable activity estimate, then generates neutral
+rule-based suggestions for teacher review. It does not use student identities,
+raw media, or individual-level scores.
 
 Three layers must stay separate:
 1. PERSON DETECTION (is a person there?)
@@ -48,6 +55,7 @@ smartclass-ecosense/
 │   ├── ARCHITECTURE.md
 │   └── PROGRESS.md
 ├── backend/
+│   ├── Dockerfile             # Slim Python image; runs as non-root
 │   ├── app/
 │   │   ├── main.py            # FastAPI app, includes routers
 │   │   ├── database.py        # DB engine and session
@@ -71,6 +79,7 @@ smartclass-ecosense/
 │   │   └── test_analytics.py
 │   ├── simulate.py            # fake event generator
 │   └── requirements.txt
+├── docker-compose.yml         # API + persistent SQLite; optional PostgreSQL profile
 └── frontend/
     └── src/
         ├── App.jsx
@@ -91,7 +100,24 @@ smartclass-ecosense/
 - source: "simulator", "camera", "manual"
 - confidence: 0.0 to 1.0 (simulator uses 1.0)
 
+**activity_windows**: id, lecture_id, window_start, window_end, movement_level, inactivity_seconds, front_facing_ratio, audio_level_db_mean, voice_activity_ratio, source
+- Signal values are nullable numeric aggregates; no raw image, video, audio, transcript, or student identity is stored.
+
+**suggestions**: id, lecture_id, rule_id, title, text, evidence_json, severity, status, created_at
+- Generated suggestions begin with `status="pending"` and include metric/time evidence, signals used, and an estimate note in `evidence_json`.
+- Pure rule output uses `info` / `consider`; the existing database/API severity enum persists these as `low` / `medium` for compatibility.
+
+**suggestion_decisions**: id, suggestion_id, decision, decided_by, decided_at, note
+- Decisions are append-only; each accept/reject/ignore action adds history without rewriting the previous decision.
+
 Later: users (roles), audit_logs, alerts, cameras, system_settings.
+
+Database dialect notes: `backend/app/database.py` applies
+`check_same_thread=False` and `PRAGMA foreign_keys=ON` only for SQLite URLs.
+Alembic enables batch rendering only for SQLite in `backend/alembic/env.py`.
+No other obvious SQLite-only SQL was found during the Phase 15 source review;
+this is not a substitute for running migrations and API tests against
+PostgreSQL.
 
 ## 4. Event rules (validation)
 - First event for a student in a lecture must be ENTRY.
@@ -124,6 +150,11 @@ Utilization % = average occupied / room capacity x 100
 | POST / GET | /classrooms | Create / list classrooms |
 | POST / GET | /lectures | Create / list lectures |
 | POST | /events | Record ENTRY / EXIT / RETURN |
+| POST | /activity | Store numeric activity windows |
+| GET | /lectures/{lecture_id}/engagement | Fused observable activity timeline and findings |
+| GET | /lectures/{lecture_id}/suggestions | Generate/read pending teacher suggestions |
+| POST | /suggestions/{suggestion_id}/decision | Append accept/reject/ignore decision |
+| GET | /lectures/{lecture_id}/suggestions/log | Read suggestion decision history |
 | GET | /dashboard/{lecture_id} | Cards + student table data |
 | GET | /analytics/utilization | Room utilization (Phase 5) |
 | GET | /insights/{lecture_id} | Insights (Phase 7) |
@@ -170,3 +201,6 @@ scope. The retention API defaults to a dry-run.
 | 2026-10-25 | Corrections are linked `MANUAL_CORRECTION` events; review rows are never overwritten | Preserve provenance and recompute attendance from auditable effective events |
 | 2026-10-25 | Phase 11 exports JSON/CSV and uses a 90-day, dry-run-first retention policy | Provide usable reports without a new PDF dependency and preview permanent deletion |
 | 2026-10-25 | Phase 13 HOD questions use deterministic intents, existing analytics, role-scoped aggregates, and an off-by-default feature flag | Provide privacy-bounded assistance without LLM-generated queries or unsupported claims |
+| 2026-10-25 | Phase 14 keeps JSONL as the event archive, uses stable client IDs for API retries, and rejects cross-class student events | Make CV delivery replay-safe and ensure a camera event cannot map a student outside the lecture class |
+| 2026-10-27 | Docker Compose uses a non-root API container, a named SQLite volume by default, and an opt-in PostgreSQL service profile | Keep first-run setup simple while providing a documented database migration path; PostgreSQL runtime remains unverified in this environment |
+| 2026-10-27 | Fusion uses configurable null-aware weighted averages and optional moving-average smoothing; suggestions are deterministic R1-R6 decision support | Keep estimates testable and class-level, and never convert aggregate indicators into individual judgments |

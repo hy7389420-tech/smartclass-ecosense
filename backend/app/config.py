@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     max_request_body_bytes: int = Field(default=1_048_576, ge=1024, le=10_485_760)
     request_rate_limit_requests: int = Field(default=120, ge=1)
     request_rate_limit_window_seconds: int = Field(default=60, ge=1)
+    simulator_request_timeout_seconds: int = Field(default=10, ge=1, le=120)
+    simulator_retry_attempts: int = Field(default=3, ge=0, le=10)
+    simulator_retry_backoff_seconds: float = Field(default=1.0, ge=0, le=30)
     auth_rate_limit_requests: int = Field(default=30, ge=1)
     event_rate_limit_requests: int = Field(default=30, ge=1)
     jwt_access_token_minutes: int = Field(default=15, ge=1, le=60)
@@ -60,9 +63,11 @@ class Settings(BaseSettings):
     activity_low_cutoff: float = Field(default=0.35, ge=0, le=1)
     activity_high_cutoff: float = Field(default=0.65, ge=0, le=1)
     activity_low_run_windows: int = Field(default=3, ge=1)
-    activity_peak_count: int = Field(default=3, ge=1)
+    activity_smoothing_windows: int = Field(default=2, ge=1)
+    activity_min_windows_for_stats: int = Field(default=3, ge=2)
+    activity_peak_z: float = Field(default=1.0, ge=0)
     activity_decline_last_windows: int = Field(default=3, ge=1)
-    activity_decline_min_windows: int = Field(default=6, ge=2)
+    activity_decline_min_baseline_windows: int = Field(default=3, ge=1)
     activity_decline_threshold: float = Field(default=0.20, ge=0, le=1)
     activity_voice_low_threshold: float = Field(default=0.20, ge=0, le=1)
     activity_voice_min_windows: int = Field(default=3, ge=1)
@@ -107,6 +112,7 @@ class Settings(BaseSettings):
             self.activity_audio_weight,
             self.activity_low_cutoff,
             self.activity_high_cutoff,
+            self.activity_peak_z,
             self.activity_decline_threshold,
             self.activity_voice_low_threshold,
             self.activity_movement_spike_threshold,
@@ -142,11 +148,6 @@ class Settings(BaseSettings):
                 )
         if self.activity_high_cutoff <= self.activity_low_cutoff:
             raise ValueError("ACTIVITY_HIGH_CUTOFF must exceed ACTIVITY_LOW_CUTOFF.")
-        if self.activity_decline_min_windows <= self.activity_decline_last_windows:
-            raise ValueError(
-                "ACTIVITY_DECLINE_MIN_WINDOWS must exceed "
-                "ACTIVITY_DECLINE_LAST_WINDOWS."
-            )
         if (
             sum(
                 (

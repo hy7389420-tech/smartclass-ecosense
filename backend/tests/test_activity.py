@@ -152,6 +152,12 @@ def test_engagement_and_suggestions_endpoints_are_aggregate_and_idempotent(
         item["rule_id"] for item in second.json()
     ]
     assert all(item["status"] == "pending" for item in first.json())
+    assert all(item["severity"] in {"low", "medium"} for item in first.json())
+    assert all(
+        "signals_used" in item["evidence_json"]
+        and "estimate_note" in item["evidence_json"]
+        for item in first.json()
+    )
     with session_factory() as session:
         stored_suggestions = session.scalar(
             select(func.count(Suggestion.id)).where(Suggestion.lecture_id == lecture_id)

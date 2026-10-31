@@ -9,6 +9,10 @@ def test_activity_configuration_defaults_and_validation():
     assert settings.activity_movement_weight == 0.3
     assert settings.activity_audio_weight == 0.1
     assert settings.activity_min_signals == 2
+    assert settings.activity_smoothing_windows == 2
+    assert settings.activity_min_windows_for_stats == 3
+    assert settings.activity_peak_z == 1.0
+    assert settings.activity_decline_min_baseline_windows == 3
 
     with pytest.raises(ValidationError, match="At least one activity signal weight"):
         Settings(
@@ -20,10 +24,12 @@ def test_activity_configuration_defaults_and_validation():
         )
     with pytest.raises(ValidationError, match="must exceed ACTIVITY_LOW_CUTOFF"):
         Settings(activity_low_cutoff=0.7, activity_high_cutoff=0.6)
-    with pytest.raises(
-        ValidationError, match="must exceed ACTIVITY_DECLINE_LAST_WINDOWS"
-    ):
-        Settings(activity_decline_last_windows=4, activity_decline_min_windows=4)
+    with pytest.raises(ValidationError):
+        Settings(activity_smoothing_windows=0)
+    with pytest.raises(ValidationError):
+        Settings(activity_decline_min_baseline_windows=0)
+    with pytest.raises(ValidationError):
+        Settings(activity_peak_z=float("nan"))
 
 
 def test_blank_development_jwt_secret_is_generated():
@@ -70,3 +76,14 @@ def test_security_limit_defaults_and_bounds():
 
 def test_ai_assistant_is_disabled_by_default():
     assert Settings().ai_assistant_enabled is False
+
+
+def test_simulator_retry_defaults_and_bounds():
+    settings = Settings()
+    assert settings.simulator_request_timeout_seconds == 10
+    assert settings.simulator_retry_attempts == 3
+    assert settings.simulator_retry_backoff_seconds == 1
+    with pytest.raises(ValidationError):
+        Settings(simulator_retry_attempts=11)
+    with pytest.raises(ValidationError):
+        Settings(simulator_retry_backoff_seconds=31)

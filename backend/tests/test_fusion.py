@@ -28,9 +28,11 @@ def fusion_config(**overrides) -> FusionConfig:
         "low_cutoff": 0.35,
         "high_cutoff": 0.65,
         "low_run_windows": 3,
-        "peak_count": 3,
+        "smoothing_windows": 1,
+        "min_windows_for_stats": 3,
+        "peak_z": 1.0,
         "decline_last_windows": 3,
-        "decline_min_windows": 6,
+        "decline_min_baseline_windows": 3,
         "decline_threshold": 0.2,
     }
     values.update(overrides)
@@ -74,6 +76,21 @@ def test_normalizes_all_signals_and_fuses_by_available_weights():
     }
 
 
+def test_normalization_clamps_values_to_configured_bounds():
+    signal = ActivitySignals(
+        window_start=datetime(2030, 1, 1, 10, tzinfo=UTC),
+        window_end=datetime(2030, 1, 1, 10, 1, tzinfo=UTC),
+        movement_level=2,
+    )
+    result = analyze_activity(
+        [signal],
+        fusion_config(min_signals=1),
+    )
+
+    assert result.windows[0].signals["movement"] == 1
+    assert result.windows[0].estimate == 1
+
+
 def test_missing_signals_are_excluded_and_too_few_means_insufficient_data():
     one_signal = ActivitySignals(
         window_start=datetime(2030, 1, 1, 10, tzinfo=UTC),
@@ -99,6 +116,15 @@ def test_missing_signals_are_excluded_and_too_few_means_insufficient_data():
     assert fused.windows[0].available_signals == 2
 
 
+def test_smoothing_uses_trailing_moving_average_and_keeps_gaps():
+    result = analyze_activity(
+        [window(index, score) for index, score in enumerate([0.2, 0.8, 0.2])],
+        fusion_config(smoothing_windows=2),
+    )
+
+    assert [item.estimate for item in result.windows] == [0.2, 0.5, 0.5]
+
+
 def test_detects_decline_low_run_and_peaks_and_handles_flat_series():
     declining = analyze_activity(
         [window(index, 0.9 if index < 3 else 0.1) for index in range(6)],
@@ -115,9 +141,26 @@ def test_detects_decline_low_run_and_peaks_and_handles_flat_series():
     assert flat.low_runs == ()
 
 
-def test_decline_is_insufficient_until_minimum_window_count():
+def test_peak_detection_requires_threshold_and_minimum_statistical_windows():
     result = analyze_activity(
-        [window(index, 0.8) for index in range(5)], fusion_config()
+        [window(index, score) for index, score in enumerate([0.2, 0.2, 0.2, 0.9])],
+        fusion_config(),
+    )
+    too_few = analyze_activity(
+        [window(0, 0.2), window(1, 0.9)],
+        fusion_config(),
+    )
+
+    assert [(peak.timestamp, peak.estimate) for peak in result.peaks] == [
+        (window(3, 0.9).window_start, 0.9)
+    ]
+    assert too_few.peaks == ()
+
+
+def test_decline_is_insufficient_until_baseline_and_recent_windows_exist():
+    result = analyze_activity(
+        [window(index, 0.8) for index in range(5)],
+        fusion_config(decline_min_baseline_windows=4),
     )
 
     assert result.decline.status == "insufficient_data"
