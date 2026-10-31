@@ -322,6 +322,24 @@ def test_review_queue_and_resolution_are_audited(
     )
     assert queue.status_code == 200
     assert queue.json()["total"] == 1
+    filtered_queue = client.get(
+        "/review/events",
+        params={"lecture_id": operation_records["lecture_id"]},
+        headers=_auth(operation_records["faculty_token"]),
+    )
+    assert filtered_queue.status_code == 200
+    assert filtered_queue.json()["total"] == 1
+    assert all(
+        event["lecture_id"] == operation_records["lecture_id"]
+        for event in filtered_queue.json()["items"]
+    )
+    unmatched_queue = client.get(
+        "/review/events",
+        params={"lecture_id": operation_records["lecture_id"] + 9999},
+        headers=_auth(operation_records["faculty_token"]),
+    )
+    assert unmatched_queue.status_code == 200
+    assert unmatched_queue.json()["total"] == 0
     resolved = client.post(
         f"/review/events/{event_id}/resolve",
         headers=_auth(operation_records["faculty_token"]),

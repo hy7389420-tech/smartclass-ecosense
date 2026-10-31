@@ -221,11 +221,14 @@ def list_review_events(
     user: User,
     limit: int,
     offset: int,
+    lecture_id: int | None = None,
 ) -> tuple[list[PresenceEventRead], int]:
     filters = [
         PresenceEvent.flagged_for_review.is_(True),
         PresenceEvent.review_status == "needs_review",
     ]
+    if lecture_id is not None:
+        filters.append(PresenceEvent.lecture_id == lecture_id)
     if user.role != "ADMIN":
         filters.append(
             PresenceEvent.lecture_id.in_(

@@ -24,8 +24,9 @@ def get_review_queue(
     user: CurrentUser,
     limit: PageLimit = 20,
     offset: PageOffset = 0,
+    lecture_id: int | None = None,
 ) -> ReviewQueueRead:
-    events, total = list_review_events(session, user, limit, offset)
+    events, total = list_review_events(session, user, limit, offset, lecture_id)
     return ReviewQueueRead(items=events, total=total, limit=limit, offset=offset)
 
 
