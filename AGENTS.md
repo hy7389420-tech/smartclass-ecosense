@@ -59,7 +59,7 @@ resource optimization. Privacy-first.
 
 ## Current phase
 
-CV module steps 4.1-4.6: Complete and tested; Step 4.5b backend event delivery is pending.
+CV module Steps 4.1-4.6 and A-F are implemented and unit tested. Live camera/microphone validation remains pending; Step 4.5b backend event delivery is also pending.
 
 ## Commands
 
