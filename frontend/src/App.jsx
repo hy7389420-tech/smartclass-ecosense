@@ -468,7 +468,7 @@ function App() {
           <article className="panel table-panel">
             <div className="panel-heading">
               <div><p className="eyebrow">Lecture {dashboard.lecture_id}</p><h2>Student presence</h2></div>
-              <span className="review-count">{dashboard.pending_review_count} pending review</span>
+              <span className="review-count">{reviewEvents.length} pending review</span>
             </div>
             <div className="table-wrap">
               <table>
