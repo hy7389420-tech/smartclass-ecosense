@@ -1,7 +1,4 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy import func, select
-
-from app.models import PresenceEvent
 from app.routes.dependencies import CurrentUser, DatabaseSession, require_role
 from app.schemas.dashboard import DashboardCards, DashboardRead
 from app.services.access import assert_can_view_lecture
@@ -10,6 +7,7 @@ from app.services.attendance import (
     camera_status,
     get_lecture,
 )
+from app.services.operations import count_pending_review_events
 
 router = APIRouter(
     prefix="/dashboard",
@@ -23,16 +21,10 @@ def read_dashboard(lecture_id: int, session: DatabaseSession, user: CurrentUser)
     assert_can_view_lecture(session, user, lecture_id)
     lecture = get_lecture(session, lecture_id)
     attendance = attendance_snapshot(session, lecture)
-    pending_review_count = (
-        session.scalar(
-            select(func.count())
-            .select_from(PresenceEvent)
-            .where(
-                PresenceEvent.lecture_id == lecture.id,
-                PresenceEvent.flagged_for_review.is_(True),
-            )
-        )
-        or 0
+    pending_review_count = count_pending_review_events(
+        session,
+        user,
+        lecture.id,
     )
     return DashboardRead(
         lecture_id=lecture.id,

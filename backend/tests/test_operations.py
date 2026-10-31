@@ -351,6 +351,57 @@ def test_review_queue_and_resolution_are_audited(
         assert session.scalar(select(func.count()).select_from(AuditLog)) == 1
 
 
+def test_dashboard_and_review_queue_count_only_active_flagged_events(
+    client, session_factory, operation_records
+):
+    with session_factory.begin() as session:
+        session.add_all(
+            [
+                PresenceEvent(
+                    lecture_id=operation_records["lecture_id"],
+                    classroom_id=operation_records["classroom_id"],
+                    student_id=None,
+                    student_code_raw="UNKNOWN",
+                    event_type="ENTRY",
+                    timestamp_utc=operation_records["start"] + timedelta(minutes=2),
+                    confidence=0.2,
+                    source="camera",
+                    flagged_for_review=True,
+                    review_status="needs_review",
+                    presence_confirmed=False,
+                ),
+                PresenceEvent(
+                    lecture_id=operation_records["lecture_id"],
+                    classroom_id=operation_records["classroom_id"],
+                    student_id=None,
+                    student_code_raw="UNKNOWN",
+                    event_type="ENTRY",
+                    timestamp_utc=operation_records["start"] + timedelta(minutes=3),
+                    confidence=0.2,
+                    source="camera",
+                    flagged_for_review=True,
+                    review_status="resolved",
+                    presence_confirmed=True,
+                ),
+            ]
+        )
+
+    queue = client.get(
+        "/review/events",
+        params={"lecture_id": operation_records["lecture_id"]},
+        headers=_auth(operation_records["faculty_token"]),
+    )
+    dashboard = client.get(
+        f"/dashboard/{operation_records['lecture_id']}",
+        headers=_auth(operation_records["faculty_token"]),
+    )
+
+    assert queue.status_code == 200
+    assert queue.json()["total"] == 1
+    assert dashboard.status_code == 200
+    assert dashboard.json()["pending_review_count"] == 1
+
+
 def test_camera_heartbeat_creates_and_resolves_offline_alert(
     client, session_factory, operation_records, monkeypatch
 ):

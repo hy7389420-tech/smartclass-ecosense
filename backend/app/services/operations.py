@@ -216,13 +216,11 @@ def resolve_review_event(
     return PresenceEventRead.model_validate(event)
 
 
-def list_review_events(
+def active_review_event_filters(
     session: Session,
     user: User,
-    limit: int,
-    offset: int,
     lecture_id: int | None = None,
-) -> tuple[list[PresenceEventRead], int]:
+) -> list:
     filters = [
         PresenceEvent.flagged_for_review.is_(True),
         PresenceEvent.review_status == "needs_review",
@@ -237,6 +235,29 @@ def list_review_events(
                 )
             )
         )
+    return filters
+
+
+def count_pending_review_events(
+    session: Session,
+    user: User,
+    lecture_id: int | None = None,
+) -> int:
+    filters = active_review_event_filters(session, user, lecture_id)
+    return (
+        session.scalar(select(func.count()).select_from(PresenceEvent).where(*filters))
+        or 0
+    )
+
+
+def list_review_events(
+    session: Session,
+    user: User,
+    limit: int,
+    offset: int,
+    lecture_id: int | None = None,
+) -> tuple[list[PresenceEventRead], int]:
+    filters = active_review_event_filters(session, user, lecture_id)
     rows = list(
         session.scalars(
             select(PresenceEvent)
