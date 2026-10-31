@@ -1,5 +1,7 @@
 import time
+from typing import Protocol
 
+import numpy as np
 import cv2
 
 from cv.config import (
@@ -9,16 +11,33 @@ from cv.config import (
     LINE_CROSSING_HYSTERESIS_DISTANCE,
     LINE_END,
     LINE_START,
+    MAX_GAP_SECONDS,
+    MIN_CONFIDENCE,
+    MIN_PRESENCE_SECONDS,
     WINDOW_NAME,
 )
 from cv.detector import PersonDetector
 from cv.event_sender import EventSender
 from cv.identity import IdentityMapper
 from cv.line_counter import LineCounter
+from cv.sustained import SustainedPresence
 from cv.tracker import PersonTracker
 
 
-def run_camera(camera_index: int = CAMERA_INDEX) -> None:
+class FrameAnalytics(Protocol):
+    def start(self) -> None: ...
+
+    def process_frame(self, frame: np.ndarray, timestamp: float) -> None: ...
+
+    def finish(self, timestamp: float) -> None: ...
+
+    def close(self) -> None: ...
+
+
+def run_camera(
+    camera_index: int = CAMERA_INDEX,
+    analytics: FrameAnalytics | None = None,
+) -> None:
     camera = cv2.VideoCapture(camera_index)
 
     if not camera.isOpened():
@@ -26,7 +45,12 @@ def run_camera(camera_index: int = CAMERA_INDEX) -> None:
         print("Camera Offline")
         return
 
+    analytics_started = False
     try:
+        if analytics is not None:
+            analytics_started = True
+            analytics.start()
+
         detector = PersonDetector()
         tracker = PersonTracker(detector.model)
         identity_mapper = IdentityMapper(DEMO_STUDENTS)
@@ -35,6 +59,11 @@ def run_camera(camera_index: int = CAMERA_INDEX) -> None:
             LINE_END,
             LINE_CROSSING_COOLDOWN_SECONDS,
             LINE_CROSSING_HYSTERESIS_DISTANCE,
+        )
+        sustained_presence = SustainedPresence(
+            MIN_PRESENCE_SECONDS,
+            MIN_CONFIDENCE,
+            MAX_GAP_SECONDS,
         )
         event_sender = EventSender()
         selection = {"track_id": None, "boxes": []}
@@ -57,6 +86,10 @@ def run_camera(camera_index: int = CAMERA_INDEX) -> None:
                 print("Camera Offline")
                 break
 
+            frame_timestamp = time.monotonic()
+            if analytics is not None:
+                analytics.process_frame(frame, frame_timestamp)
+
             frame_height, frame_width = frame.shape[:2]
             line_start = (
                 int(LINE_START[0] * frame_width),
@@ -78,6 +111,11 @@ def run_camera(camera_index: int = CAMERA_INDEX) -> None:
             }:
                 selection["track_id"] = None
             for x1, y1, x2, y2, confidence, track_id in detections:
+                presence_confirmed = sustained_presence.update(
+                    track_id,
+                    frame_timestamp,
+                    confidence,
+                )
                 identity = identity_mapper.get(track_id)
                 is_selected = selection["track_id"] == track_id
                 color = (255, 255, 0) if is_selected else (0, 255, 0)
@@ -100,9 +138,9 @@ def run_camera(camera_index: int = CAMERA_INDEX) -> None:
                         bottom_center[0] / frame_width,
                         bottom_center[1] / frame_height,
                     ),
-                    time.monotonic(),
+                    frame_timestamp,
                 )
-                if crossing is not None:
+                if crossing is not None and presence_confirmed:
                     identity = identity_mapper.get(crossing.track_id)
                     event_sender.send(
                         crossing.track_id,
@@ -138,8 +176,16 @@ def run_camera(camera_index: int = CAMERA_INDEX) -> None:
                     f"to {identity.name} ({identity.student_id})"
                 )
     finally:
-        camera.release()
-        cv2.destroyAllWindows()
+        try:
+            if analytics_started and analytics is not None:
+                analytics.finish(time.monotonic())
+        finally:
+            try:
+                if analytics_started and analytics is not None:
+                    analytics.close()
+            finally:
+                camera.release()
+                cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":

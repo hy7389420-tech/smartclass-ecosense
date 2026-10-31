@@ -1,2 +1,5 @@
-opencv-python>=4.8,<4.12
+opencv-contrib-python>=4.8,<4.12
 ultralytics>=8.3,<9
+mediapipe==1.1.1
+httpx==0.28.1
+python-dotenv>=1.0,<2
