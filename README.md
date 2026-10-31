@@ -100,7 +100,7 @@ Open the frontend shown by Vite, normally `http://localhost:5173`.
   restarting the CV module.
 - Camera status describes recent system activity, not detection accuracy.
 - No accuracy or energy-savings results have been measured yet.
-- Camera alerts can show duplicate "camera offline" entries.
+- Repeated camera alerts are grouped into one entry with a count.
 - Some integration states may depend on local configuration, a running backend,
   and valid demo data.
 - Computer vision, face identity, and camera deployment remain subject to local
