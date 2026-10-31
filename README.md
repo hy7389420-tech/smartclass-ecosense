@@ -93,12 +93,10 @@ Open the frontend shown by Vite, normally `http://localhost:5173`.
 
 ## Known limitations
 
-- Live camera and microphone validation remains pending unless documented test
-  evidence is available.
-- System accuracy, occupancy precision, and resource or energy savings are not
-  yet measured.
-- The simulator is synthetic demo data and must not be presented as measured
-  attendance.
+- The camera/CV module is offline in the demo; the demo uses seeded events.
+- Camera status describes recent system activity, not detection accuracy.
+- No accuracy or energy-savings results have been measured yet.
+- Camera alerts can show duplicate "camera offline" entries.
 - Some integration states may depend on local configuration, a running backend,
   and valid demo data.
 - Computer vision, face identity, and camera deployment remain subject to local
