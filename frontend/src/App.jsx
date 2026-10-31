@@ -4,6 +4,7 @@ import {
   decideSuggestion,
   getCurrentUser,
   getDashboard,
+  getAlerts,
   getEngagement,
   getLectures,
   getReviewEvents,
@@ -24,6 +25,16 @@ const statusLabels = {
 function formatTime(value) {
   if (!value) return '-'
   return new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+function formatAlertTime(value) {
+  if (!value) return '-'
+  return new Date(value).toLocaleString([], {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
 function formatDecisionTime(value) {
@@ -56,6 +67,8 @@ function App() {
   const [suggestions, setSuggestions] = useState([])
   const [suggestionHistory, setSuggestionHistory] = useState([])
   const [suggestionHistoryState, setSuggestionHistoryState] = useState('loading')
+  const [alerts, setAlerts] = useState([])
+  const [alertsState, setAlertsState] = useState('loading')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [engagementState, setEngagementState] = useState('loading')
@@ -72,8 +85,10 @@ function App() {
     setEngagementState('loading')
     setSuggestionHistory([])
     setSuggestionHistoryState('loading')
+    setAlerts([])
+    setAlertsState('loading')
     try {
-      const [dashboardData, engagementData, suggestionData, suggestionHistoryData, reviewEventsData] = await Promise.all([
+      const [dashboardData, engagementData, suggestionData, suggestionHistoryData, reviewEventsData, alertsData] = await Promise.all([
         getDashboard(selectedId),
         getEngagement(selectedId).catch((engagementError) => ({
           __error: engagementError,
@@ -83,6 +98,9 @@ function App() {
           __error: historyError,
         })),
         getReviewEvents(selectedId).catch(() => ({ items: [] })),
+        getAlerts().catch((alertsError) => ({
+          __error: alertsError,
+        })),
       ])
       setDashboard(dashboardData)
       if (engagementData.__error) {
@@ -101,6 +119,13 @@ function App() {
         setSuggestionHistoryState(suggestionHistoryData.length ? 'ready' : 'no_data')
       }
       setReviewEvents(reviewEventsData.items)
+      if (alertsData.__error) {
+        setAlerts([])
+        setAlertsState('error')
+      } else {
+        setAlerts(alertsData.items)
+        setAlertsState(alertsData.items.length ? 'ready' : 'no_data')
+      }
     } catch (err) {
       if (err.status === 401) {
         localStorage.removeItem('ecosense_token')
@@ -293,6 +318,49 @@ function App() {
             ].map(([label, value]) => (
               <article className="stat-card" key={label}><span>{label}</span><strong>{value}</strong></article>
             ))}
+          </section>
+
+          <section className="camera-panel-grid">
+            <article className="panel camera-details-panel">
+              <div className="panel-heading">
+                <div><p className="eyebrow">Camera status</p><h2>Connection details</h2></div>
+                <span className={`camera-status camera-status-${dashboard.camera_status === 'Online' ? 'online' : 'offline'}`}>
+                  {dashboard.camera_status}
+                </span>
+              </div>
+              <dl className="camera-details">
+                <div><dt>Classroom ID</dt><dd>{selectedLecture?.classroom_id ?? '-'}</dd></div>
+                <div><dt>Lecture ID</dt><dd>{dashboard.lecture_id}</dd></div>
+                <div><dt>Video display</dt><dd>Not available; metadata only</dd></div>
+              </dl>
+              <p className="metadata-note">
+                Camera status describes recent system activity, not detection accuracy.
+              </p>
+            </article>
+
+            <article className="panel camera-alerts-panel">
+              <div className="panel-heading">
+                <div><p className="eyebrow">Operational monitoring</p><h2>Camera alerts</h2></div>
+              </div>
+              {alertsState === 'loading' && (
+                <p className="empty-state">Loading camera alerts...</p>
+              )}
+              {alertsState === 'no_data' && (
+                <p className="empty-state">No unresolved camera alerts.</p>
+              )}
+              {alertsState === 'error' && (
+                <p className="empty-state error-state">Camera alerts could not be loaded. The dashboard will retry automatically.</p>
+              )}
+              {alertsState === 'ready' && alerts.map((alert) => (
+                <div className="camera-alert-item" key={alert.id}>
+                  <div>
+                    <strong>{alert.kind.replaceAll('_', ' ')}</strong>
+                    <span>{alert.severity} · {formatAlertTime(alert.created_at)}</span>
+                  </div>
+                  <p>{alert.message}</p>
+                </div>
+              ))}
+            </article>
           </section>
 
           <section className="content-grid">

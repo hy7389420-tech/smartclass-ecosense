@@ -52,6 +52,11 @@ export function getDashboard(lectureId) {
   return apiRequest(`/dashboard/${lectureId}`)
 }
 
+export function getAlerts() {
+  const params = new URLSearchParams({ unresolved_only: 'true', limit: '100', offset: '0' })
+  return apiRequest(`/alerts?${params}`)
+}
+
 export function getEngagement(lectureId) {
   return apiRequest(`/lectures/${lectureId}/engagement`)
 }
