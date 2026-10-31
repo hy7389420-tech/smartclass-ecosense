@@ -94,6 +94,11 @@ Open the frontend shown by Vite, normally `http://localhost:5173`.
 ## Known limitations
 
 - The camera/CV module is offline in the demo; the demo uses seeded events.
+- Live CV has been tested with a webcam for entry/exit detection, but backend
+  event delivery validation is still being finalized.
+- After changing `LECTURE_ID`, clear the stale CV queue files
+  `cv/data/events.jsonl` and `cv/data/events.delivery` together before
+  restarting the CV module.
 - Camera status describes recent system activity, not detection accuracy.
 - No accuracy or energy-savings results have been measured yet.
 - Camera alerts can show duplicate "camera offline" entries.
