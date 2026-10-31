@@ -1,16 +1,49 @@
-# React + Vite
+# SmartClass EcoSense Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+The SmartClass EcoSense frontend is a React application built with Vite. It
+shows presence dashboard information, lecture context, camera status and
+alerts, aggregate activity, neutral suggestions, suggestion history, and
+human-review actions.
 
-Currently, two official plugins are available:
+## Windows setup
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+From the repository root:
 
-## React Compiler
+```powershell
+if (-not (Test-Path frontend\.env)) {
+  Copy-Item frontend\.env.example frontend\.env
+}
+cd frontend
+npm install
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Keep secrets out of frontend environment files. Camera keys and backend
+credentials must remain on the backend or in protected local backend
+configuration.
 
-## Expanding the Oxlint configuration
+## Run
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+```powershell
+cd frontend
+npm run dev
+```
+
+Open `http://localhost:5173`. The frontend uses its configured API base URL,
+normally `/api`, to communicate with the FastAPI backend on port 8000.
+
+## Available commands
+
+```powershell
+npm run lint
+npm run build
+npm run preview
+```
+
+## Privacy and UI rules
+
+- Camera panels display text and metadata only; do not add live video or raw
+  frame display.
+- Do not claim measured detection accuracy or energy savings.
+- Alerts and suggestions must use neutral, observable wording.
+- Human review is for verified corrections and resolution reasons. It must not
+  accuse, rank, blame, or punish students or faculty.
