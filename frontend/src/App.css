@@ -27,6 +27,17 @@ header h1 { margin: 4px 0 0; font-size: 34px; }
 .suggestions-panel { max-height: 330px; overflow-y: auto; }
 .suggestion { border-top: 1px solid #edf0eb; padding: 14px 0; }
 .suggestion p { color: #647067; font-size: 14px; }
+.suggestion-history { border-top: 1px solid #edf0eb; margin-top: 10px; padding-top: 14px; }
+.suggestion-history h3 { margin: 0 0 10px; font-size: 15px; }
+.suggestion-history-item { border-top: 1px solid #edf0eb; padding: 10px 0; }
+.suggestion-history-item:first-of-type { border-top: 0; }
+.suggestion-history-item > div { display: flex; justify-content: space-between; gap: 10px; }
+.suggestion-history-item > div span { color: #718078; font-size: 12px; }
+.suggestion-history-item p { margin: 7px 0 0; color: #647067; font-size: 13px; }
+.decision-badge { display: inline-block; border-radius: 999px; margin-top: 7px; padding: 4px 8px; background: #edf1ec; font-size: 11px; font-weight: 800; text-transform: capitalize; }
+.decision-accepted { background: #e1f4e7; color: #24623b; }
+.decision-rejected { background: #fde8e8; color: #8a3d3d; }
+.decision-ignored { background: #fff0d4; color: #8b5b20; }
 .decision-actions { display: flex; gap: 7px; }
 .decision-actions button { border: 1px solid #d5ddd5; border-radius: 7px; background: white; padding: 6px 10px; }
 .table-panel { overflow: hidden; }

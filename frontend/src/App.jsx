@@ -7,6 +7,7 @@ import {
   getEngagement,
   getLectures,
   getReviewEvents,
+  getSuggestionHistory,
   getSuggestions,
   login,
   resolveReviewEvent,
@@ -23,6 +24,16 @@ const statusLabels = {
 function formatTime(value) {
   if (!value) return '-'
   return new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+function formatDecisionTime(value) {
+  if (!value) return '-'
+  return new Date(value).toLocaleString([], {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
 function formatLectureWindow(lecture) {
@@ -43,6 +54,8 @@ function App() {
   const [dashboard, setDashboard] = useState(null)
   const [engagement, setEngagement] = useState(null)
   const [suggestions, setSuggestions] = useState([])
+  const [suggestionHistory, setSuggestionHistory] = useState([])
+  const [suggestionHistoryState, setSuggestionHistoryState] = useState('loading')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [engagementState, setEngagementState] = useState('loading')
@@ -57,13 +70,18 @@ function App() {
     setError('')
     setEngagement(null)
     setEngagementState('loading')
+    setSuggestionHistory([])
+    setSuggestionHistoryState('loading')
     try {
-      const [dashboardData, engagementData, suggestionData, reviewEventsData] = await Promise.all([
+      const [dashboardData, engagementData, suggestionData, suggestionHistoryData, reviewEventsData] = await Promise.all([
         getDashboard(selectedId),
         getEngagement(selectedId).catch((engagementError) => ({
           __error: engagementError,
         })),
         getSuggestions(selectedId).catch(() => []),
+        getSuggestionHistory(selectedId).catch((historyError) => ({
+          __error: historyError,
+        })),
         getReviewEvents(selectedId).catch(() => ({ items: [] })),
       ])
       setDashboard(dashboardData)
@@ -75,6 +93,13 @@ function App() {
         setEngagementState(engagementData.windows?.length ? 'ready' : 'no_data')
       }
       setSuggestions(suggestionData)
+      if (suggestionHistoryData.__error) {
+        setSuggestionHistory([])
+        setSuggestionHistoryState('error')
+      } else {
+        setSuggestionHistory(suggestionHistoryData)
+        setSuggestionHistoryState(suggestionHistoryData.length ? 'ready' : 'no_data')
+      }
       setReviewEvents(reviewEventsData.items)
     } catch (err) {
       if (err.status === 401) {
@@ -310,6 +335,30 @@ function App() {
                   </div>
                 </div>
               ))}
+              <div className="suggestion-history">
+                <h3>Decision history</h3>
+                {suggestionHistoryState === 'loading' && (
+                  <p className="empty-state">Loading suggestion decisions...</p>
+                )}
+                {suggestionHistoryState === 'no_data' && (
+                  <p className="empty-state">No suggestion decisions recorded yet.</p>
+                )}
+                {suggestionHistoryState === 'error' && (
+                  <p className="empty-state error-state">Decision history could not be loaded. Try refreshing.</p>
+                )}
+                {suggestionHistoryState === 'ready' && suggestionHistory.map((decision) => (
+                  <div className="suggestion-history-item" key={decision.id}>
+                    <div>
+                      <strong>Suggestion {decision.suggestion_id}</strong>
+                      <span>{formatDecisionTime(decision.decided_at)} · Actor {decision.decided_by}</span>
+                    </div>
+                    <span className={`decision-badge decision-${decision.decision}`}>
+                      {decision.decision}
+                    </span>
+                    {decision.note && <p>{decision.note}</p>}
+                  </div>
+                ))}
+              </div>
             </article>
           </section>
 

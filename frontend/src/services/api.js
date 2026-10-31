@@ -60,6 +60,10 @@ export function getSuggestions(lectureId) {
   return apiRequest(`/lectures/${lectureId}/suggestions`)
 }
 
+export function getSuggestionHistory(lectureId) {
+  return apiRequest(`/lectures/${lectureId}/suggestions/log`)
+}
+
 export function decideSuggestion(suggestionId, decision) {
   return apiRequest(`/suggestions/${suggestionId}/decision`, {
     method: 'POST',
