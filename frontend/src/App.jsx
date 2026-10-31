@@ -27,6 +27,36 @@ function formatTime(value) {
   return new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
+function formatLocalTimestamp(value) {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  const pad = (part) => String(part).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+function localTimestampToUtc(value) {
+  if (!value) return ''
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? '' : date.toISOString()
+}
+
+function readSavedLectureId() {
+  try {
+    return localStorage.getItem('ecosense_selected_lecture_id') || ''
+  } catch {
+    return ''
+  }
+}
+
+function saveSelectedLectureId(lectureId) {
+  try {
+    localStorage.setItem('ecosense_selected_lecture_id', lectureId)
+  } catch {
+    // Lecture selection still works when browser storage is unavailable.
+  }
+}
+
 function formatAlertTime(value) {
   if (!value) return '-'
   return new Date(value).toLocaleString([], {
@@ -178,10 +208,16 @@ function App() {
       .then(([userData, lectureData]) => {
         setUser(userData)
         setLectures(lectureData.items)
-        const selected = lectureData.items.find((lecture) => lecture.status === 'live')
+        const savedLectureId = readSavedLectureId()
+        const savedLecture = lectureData.items.find(
+          (lecture) => String(lecture.id) === savedLectureId,
+        )
+        const selected = savedLecture
+          || lectureData.items.find((lecture) => lecture.status === 'live')
           || lectureData.items[0]
         if (selected) {
           setLectureId(String(selected.id))
+          saveSelectedLectureId(String(selected.id))
           loadDashboard(selected.id)
         }
       })
@@ -255,7 +291,7 @@ function App() {
         await correctReviewEvent(eventId, {
           student_id: formData.get('student_id') ? Number(formData.get('student_id')) : null,
           event_type: formData.get('event_type'),
-          timestamp,
+          timestamp: localTimestampToUtc(timestamp),
           reason,
         })
         await loadDashboard(lectureId)
@@ -316,6 +352,7 @@ function App() {
           Lecture
           <select value={lectureId} onChange={(event) => {
             setLectureId(event.target.value)
+            saveSelectedLectureId(event.target.value)
             loadDashboard(event.target.value)
           }}>
             {lectures.map((lecture) => (
@@ -517,7 +554,7 @@ function App() {
                 </select>
               </label>
               <label>Timestamp
-                <input name="timestamp" type="datetime-local" defaultValue={event.timestamp_utc.slice(0, 16)} />
+                <input name="timestamp" type="datetime-local" defaultValue={formatLocalTimestamp(event.timestamp_utc)} />
               </label>
               {!event.student_id && (
                 <label>Student ID
