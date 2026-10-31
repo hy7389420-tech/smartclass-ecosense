@@ -52,9 +52,39 @@ export function getDashboard(lectureId) {
   return apiRequest(`/dashboard/${lectureId}`)
 }
 
+export function getLectureAnalytics(lectureId) {
+  return apiRequest(`/analytics/lecture/${lectureId}`)
+}
+
 export function getAlerts() {
   const params = new URLSearchParams({ unresolved_only: 'true', limit: '100', offset: '0' })
   return apiRequest(`/alerts?${params}`)
+}
+
+export async function downloadSessionReport(lectureId, reportFormat) {
+  const token = localStorage.getItem('ecosense_token')
+  const headers = token ? { Authorization: `Bearer ${token}` } : {}
+  const response = await fetch(
+    `${API_BASE_URL}/reports/lectures/${lectureId}?format=${reportFormat}`,
+    { headers },
+  )
+
+  if (!response.ok) {
+    let message = `Report download failed (${response.status})`
+    try {
+      const body = await response.json()
+      message = body?.error?.message || body?.detail || message
+    } catch {
+      // Keep the status-based message when the response has no JSON body.
+    }
+    throw new Error(message)
+  }
+
+  const blob = await response.blob()
+  const disposition = response.headers.get('Content-Disposition') || ''
+  const filenameMatch = disposition.match(/filename="?([^";]+)"?/i)
+  const filename = filenameMatch?.[1] || `session-${lectureId}.${reportFormat === 'csv' ? 'csv' : 'json'}`
+  return { blob, filename }
 }
 
 export function getEngagement(lectureId) {

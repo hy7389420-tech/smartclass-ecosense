@@ -2,11 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   correctReviewEvent,
   decideSuggestion,
+  downloadSessionReport,
   getCurrentUser,
   getDashboard,
   getAlerts,
   getEngagement,
   getLectures,
+  getLectureAnalytics,
   getReviewEvents,
   getSuggestionHistory,
   getSuggestions,
@@ -77,6 +79,23 @@ function formatDecisionTime(value) {
   })
 }
 
+function collapseDuplicateAlerts(items) {
+  const collapsed = new Map()
+  items.forEach((alert) => {
+    const key = `${alert.kind}|${alert.severity}|${alert.message}`
+    const existing = collapsed.get(key)
+    if (existing) {
+      existing.count += 1
+      if (new Date(alert.created_at) > new Date(existing.created_at)) {
+        existing.created_at = alert.created_at
+      }
+    } else {
+      collapsed.set(key, { ...alert, count: 1 })
+    }
+  })
+  return Array.from(collapsed.values())
+}
+
 function formatLectureWindow(lecture) {
   if (!lecture?.start_time || !lecture?.end_time) return ''
   const start = new Date(lecture.start_time)
@@ -100,6 +119,10 @@ function App() {
   const [suggestionHistoryState, setSuggestionHistoryState] = useState('loading')
   const [alerts, setAlerts] = useState([])
   const [alertsState, setAlertsState] = useState('loading')
+  const [utilization, setUtilization] = useState(null)
+  const [utilizationState, setUtilizationState] = useState('loading')
+  const [reportDownloads, setReportDownloads] = useState({})
+  const [reportError, setReportError] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [engagementState, setEngagementState] = useState('loading')
@@ -121,10 +144,12 @@ function App() {
     setSuggestionsState('loading')
     setAlerts([])
     setAlertsState('loading')
+    setUtilization(null)
+    setUtilizationState('loading')
     setReviewEvents([])
     setReviewState('loading')
     try {
-      const [dashboardData, engagementData, suggestionData, suggestionHistoryData, reviewEventsData, alertsData] = await Promise.all([
+      const [dashboardData, engagementData, suggestionData, suggestionHistoryData, reviewEventsData, alertsData, analyticsData] = await Promise.all([
         getDashboard(selectedId).catch((dashboardError) => ({
           __error: dashboardError,
         })),
@@ -142,6 +167,9 @@ function App() {
         })),
         getAlerts().catch((alertsError) => ({
           __error: alertsError,
+        })),
+        getLectureAnalytics(selectedId).catch((analyticsError) => ({
+          __error: analyticsError,
         })),
       ])
       if (dashboardData.__error) {
@@ -188,6 +216,21 @@ function App() {
       } else {
         setAlerts(alertsData.items)
         setAlertsState(alertsData.items.length ? 'ready' : 'no_data')
+      }
+      if (analyticsData.__error) {
+        setUtilization(null)
+        setUtilizationState(
+          analyticsData.__error.status === 404 || analyticsData.__error.status === 409 ? 'no_data' : 'error',
+        )
+      } else if (
+        analyticsData.utilization_percent == null
+        || analyticsData.occupancy_by_minute?.length === 0
+      ) {
+        setUtilization(null)
+        setUtilizationState('no_data')
+      } else {
+        setUtilization(analyticsData)
+        setUtilizationState('ready')
       }
     } catch (err) {
       if (err.status === 401) {
@@ -287,6 +330,7 @@ function App() {
         setError('Correction timestamp and human review reason are required.')
         return
       }
+
       try {
         await correctReviewEvent(eventId, {
           student_id: formData.get('student_id') ? Number(formData.get('student_id')) : null,
@@ -299,6 +343,26 @@ function App() {
         setError(err.message)
       }
     }
+
+  async function handleReportDownload(reportFormat) {
+    setReportDownloads((current) => ({ ...current, [reportFormat]: true }))
+    setReportError('')
+    try {
+      const { blob, filename } = await downloadSessionReport(lectureId, reportFormat)
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      setReportError(err.message)
+    } finally {
+      setReportDownloads((current) => ({ ...current, [reportFormat]: false }))
+    }
+  }
 
   if (!token) {
     return (
@@ -333,6 +397,7 @@ function App() {
     const y = 110 - window.estimate * 100
     return `${x},${y}`
   }).join(' ')
+  const visibleAlerts = collapseDuplicateAlerts(alerts)
 
   return (
     <div className="app-shell">
@@ -371,6 +436,30 @@ function App() {
           </span>
           <span>{formatLectureWindow(selectedLecture)}</span>
         </div>
+      )}
+      {selectedLecture && (
+        <section className="report-panel panel">
+          <div className="panel-heading">
+            <div><p className="eyebrow">Lecture {selectedLecture.id}</p><h2>Report export</h2></div>
+          </div>
+          <div className="report-actions">
+            <button
+              type="button"
+              disabled={reportDownloads.json}
+              onClick={() => handleReportDownload('json')}
+            >
+              {reportDownloads.json ? 'Preparing JSON...' : 'Download JSON'}
+            </button>
+            <button
+              type="button"
+              disabled={reportDownloads.csv}
+              onClick={() => handleReportDownload('csv')}
+            >
+              {reportDownloads.csv ? 'Preparing CSV...' : 'Download CSV'}
+            </button>
+          </div>
+          {reportError && <p className="error">{reportError}</p>}
+        </section>
       )}
 
       {error && <p className="error banner">{error}</p>}
@@ -421,19 +510,55 @@ function App() {
               {alertsState === 'error' && (
                 <p className="empty-state error-state">Camera alerts could not be loaded. The dashboard will retry automatically.</p>
               )}
-              {alertsState === 'ready' && alerts.map((alert) => (
+              {alertsState === 'ready' && visibleAlerts.map((alert) => (
                 <div className="camera-alert-item" key={alert.id}>
                   <div>
                     <strong>{alert.kind.replaceAll('_', ' ')}</strong>
                     <span>{alert.severity} · {formatAlertTime(alert.created_at)}</span>
                   </div>
-                  <p>{alert.message}</p>
+                  <p>{alert.message}{alert.count > 1 ? ` x${alert.count}` : ''}</p>
                 </div>
               ))}
             </article>
           </section>
 
           <section className="content-grid">
+            <article className="panel utilization-panel">
+              <div className="panel-heading">
+                <div><p className="eyebrow">Selected lecture</p><h2>Occupancy and utilization</h2></div>
+              </div>
+              {utilizationState === 'loading' && <p className="empty-state">Loading occupancy and utilization...</p>}
+              {utilizationState === 'error' && (
+                <p className="empty-state error-state">Occupancy and utilization could not be loaded.</p>
+              )}
+              {utilizationState === 'no_data' && (
+                <p className="empty-state">No completed-lecture utilization data is available.</p>
+              )}
+              {utilizationState === 'ready' && utilization && (
+                <>
+                  <div className="utilization-bars">
+                    <div className="utilization-bar-row">
+                      <div><span>Average occupancy</span><strong>{utilization.average_occupancy.toFixed(1)} / {utilization.capacity}</strong></div>
+                      <div className="utilization-track">
+                        <span style={{ width: `${Math.min(100, utilization.capacity ? utilization.average_occupancy / utilization.capacity * 100 : 0)}%` }} />
+                      </div>
+                    </div>
+                    <div className="utilization-bar-row">
+                      <div><span>Room utilization</span><strong>{utilization.utilization_percent.toFixed(1)}%</strong></div>
+                      <div className="utilization-track">
+                        <span style={{ width: `${Math.min(100, utilization.utilization_percent)}%` }} />
+                      </div>
+                    </div>
+                  </div>
+                  <dl className="utilization-details">
+                    <div><dt>Peak occupancy</dt><dd>{utilization.peak_occupancy}</dd></div>
+                    <div><dt>Capacity</dt><dd>{utilization.capacity}</dd></div>
+                    <div><dt>Energy savings</dt><dd>Not measured</dd></div>
+                  </dl>
+                </>
+              )}
+            </article>
+
             <article className="panel">
               <div className="panel-heading">
                 <div><p className="eyebrow">Observable activity</p><h2>Activity estimate</h2></div>
