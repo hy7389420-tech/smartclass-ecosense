@@ -94,7 +94,7 @@ Open the frontend shown by Vite, normally `http://localhost:5173`.
 ## Known limitations
 
 - The camera/CV module is offline in the demo; the demo uses seeded events.
-- <YAHAN APNI WORDING PASTE KARO>
+- Live CV was tested with a webcam and detects entry/exit events; backend event delivery validation is still being finalized.
 - After changing `LECTURE_ID`, clear the stale CV queue files
   `cv/data/events.jsonl` and `cv/data/events.delivery` together before
   restarting the CV module.
