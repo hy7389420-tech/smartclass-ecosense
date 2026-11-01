@@ -95,6 +95,13 @@ Open the frontend shown by Vite, normally `http://localhost:5173`.
   accuracy. Claims of accuracy or legal compliance should only be made after
   documented measurement and review.
 
+## Sustainability
+
+- [Simulated utilization examples from test fixtures](docs/UTILIZATION_EXAMPLE.md)
+  show underutilized, balanced, overutilized, and insufficient-data endpoint
+  responses. These examples are not measured data, and energy savings are
+  `Not measured`.
+
 ## Known limitations
 
 - The camera/CV module is offline in the demo; the demo uses seeded events.

@@ -4,6 +4,7 @@ Update this file at the END of every coding session (you or the AI agent).
 A new chat/agent reads this first to know where to continue.
 
 ## Current status
+- **2026-11-01 docs:** Added a simulated utilization fixture reference in [UTILIZATION_EXAMPLE.md](./UTILIZATION_EXAMPLE.md), linked it from the README Sustainability section, and documented configurable thresholds plus `Not measured` energy savings.
 - **2026-11-01 checkpoint 12B:** Added the selected classroom Room utilization panel with capacity, lecture count, occupancy metrics, utilization bar, unused periods, neutral status, indicative-data notice, advisory recommendations, and explicit "Not measured" energy savings. Loading, empty, and backend-error states are separated; frontend verification pending.
 - **2026-11-01 checkpoint 12A:** Extended the classroom utilization endpoint with balanced/underutilized/overutilized status, advisory recommendations, configured default thresholds, insufficient-data handling, and `Not measured` energy savings. Backend analytics/auth tests passed.
 - **2026-10-31 checkpoint 10:** Added the selected lecture's occupancy/utilization frontend panel with loading, empty, and error states and an explicit "Not measured" energy-savings label. Added authenticated JSON/CSV session report downloads with per-format loading state and download errors. Deduplicated unresolved camera alerts by kind, severity, and message with a visible count. Frontend verification pending.
