@@ -169,6 +169,7 @@ for production. When blank in development, a process-local random secret is
 generated; tokens become invalid after restarting the server. Login rate
 limiting is process-local and is intended for this MVP, not a multi-worker
 deployment.
+Set JWT_SECRET_KEY in backend/.env (use a long random value, never commit it). Without it, a new secret is generated on every start and everyone is logged out after a restart.
 
 Student accounts require an explicit `users.student_id` mapping. Existing
 accounts are intentionally left unmapped by the migration, and an unmapped
@@ -271,12 +272,15 @@ Example Windows Task Scheduler command to run the real deletion daily at
 `backend` folder:
 
 ```text
-C:\path\to\SmartClass_EcoSense\.venv-backend\Scripts\python.exe -m scripts.retention --execute
+<repo>\backend\.venv-backend\Scripts\python.exe -m scripts.retention --execute
 ```
 
 Configure the daily task with `schtasks.exe /Create /SC DAILY /ST 02:00`
-and set its working directory to the backend folder. Example cron entry,
-adjust the repository path and Python executable for the server:
+and set its working directory to `<repo>\backend`.
+
+The following cron entry is Linux-only; its virtual environment path differs
+from Windows and is `./.venv-backend/bin/python`. Adjust the repository path
+and Python executable for the server:
 
 ```cron
 0 2 * * * cd /path/to/SmartClass_EcoSystem_Project/backend && ./.venv-backend/bin/python -m scripts.retention --execute >> /var/log/ecosense-retention.log 2>&1

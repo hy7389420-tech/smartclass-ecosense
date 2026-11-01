@@ -44,6 +44,7 @@ if (-not (Test-Path backend\.env)) {
 
 Set required local values such as the JWT secret and other camera settings in
 `backend/.env`. Never commit real passwords, API keys, or camera keys.
+Set JWT_SECRET_KEY in backend/.env (use a long random value, never commit it). Without it, a new secret is generated on every start and everyone is logged out after a restart.
 
 ### 3. Install frontend dependencies
 

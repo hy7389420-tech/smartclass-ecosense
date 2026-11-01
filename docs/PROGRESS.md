@@ -4,6 +4,7 @@ Update this file at the END of every coding session (you or the AI agent).
 A new chat/agent reads this first to know where to continue.
 
 ## Current status
+- **2026-11-01 documentation:** Fixed the Windows Task Scheduler retention path to `<repo>\backend\.venv-backend\Scripts\python.exe`, marked the cron example as Linux-only, and documented `JWT_SECRET_KEY` stability in the root and backend setup guides.
 - **2026-11-01 retention docs:** Documented manual dry-run and real-run commands, Windows Task Scheduler and cron examples, irreversible deletion warning, and that automatic retention scheduling is not enabled by default.
 - **2026-11-01 docs:** Added a simulated utilization fixture reference in [UTILIZATION_EXAMPLE.md](./UTILIZATION_EXAMPLE.md), linked it from the README Sustainability section, and documented configurable thresholds plus `Not measured` energy savings.
 - **2026-11-01 checkpoint 12B:** Added the selected classroom Room utilization panel with capacity, lecture count, occupancy metrics, utilization bar, unused periods, neutral status, indicative-data notice, advisory recommendations, and explicit "Not measured" energy savings. Loading, empty, and backend-error states are separated; frontend verification pending.
