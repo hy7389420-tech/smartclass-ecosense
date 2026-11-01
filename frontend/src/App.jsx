@@ -7,6 +7,7 @@ import {
   getDashboard,
   getAlerts,
   getEngagement,
+  getClassroomUtilization,
   getLectures,
   getLectureAnalytics,
   getReviewEvents,
@@ -121,6 +122,8 @@ function App() {
   const [alertsState, setAlertsState] = useState('loading')
   const [utilization, setUtilization] = useState(null)
   const [utilizationState, setUtilizationState] = useState('loading')
+  const [roomUtilization, setRoomUtilization] = useState(null)
+  const [roomUtilizationState, setRoomUtilizationState] = useState('loading')
   const [reportDownloads, setReportDownloads] = useState({})
   const [reportError, setReportError] = useState('')
   const [error, setError] = useState('')
@@ -146,6 +149,8 @@ function App() {
     setAlertsState('loading')
     setUtilization(null)
     setUtilizationState('loading')
+    setRoomUtilization(null)
+    setRoomUtilizationState('loading')
     setReviewEvents([])
     setReviewState('loading')
     try {
@@ -231,6 +236,23 @@ function App() {
       } else {
         setUtilization(analyticsData)
         setUtilizationState('ready')
+      }
+      if (!analyticsData.__error && analyticsData.classroom_id) {
+        try {
+          const roomData = await getClassroomUtilization(analyticsData.classroom_id)
+          setRoomUtilization(roomData)
+          setRoomUtilizationState(
+            roomData.status === 'no_data' || roomData.lecture_count === 0 ? 'no_data' : 'ready',
+          )
+        } catch (roomError) {
+          setRoomUtilization(null)
+          setRoomUtilizationState(
+            roomError.status === 404 || roomError.status === 409 ? 'no_data' : 'error',
+          )
+        }
+      } else {
+        setRoomUtilization(null)
+        setRoomUtilizationState('no_data')
       }
     } catch (err) {
       if (err.status === 401) {
@@ -580,6 +602,73 @@ function App() {
               <p className="estimate-note">
                 {engagement?.estimate_note || 'Activity estimates are indicators, not proof of attention or engagement.'}
               </p>
+            </article>
+
+            <article className="panel room-utilization-panel">
+              <div className="panel-heading">
+                <div><p className="eyebrow">Selected classroom</p><h2>Room utilization</h2></div>
+                {roomUtilizationState === 'ready' && roomUtilization && (
+                  <span className={`room-status room-status-${roomUtilization.status}`}>
+                    {roomUtilization.status}
+                  </span>
+                )}
+              </div>
+              {roomUtilizationState === 'loading' && <p className="empty-state">Loading room utilization...</p>}
+              {roomUtilizationState === 'error' && (
+                <p className="empty-state error-state">Room utilization could not be loaded. The backend may be unavailable.</p>
+              )}
+              {roomUtilizationState === 'no_data' && (
+                <p className="empty-state">No room utilization data is available.</p>
+              )}
+              {roomUtilizationState === 'ready' && roomUtilization && (
+                <>
+                  {roomUtilization.lecture_count < 2 && (
+                    <p className="room-indicative-note">
+                      Based on {roomUtilization.lecture_count} lecture(s); treat as indicative only
+                    </p>
+                  )}
+                  <dl className="room-utilization-details">
+                    <div><dt>Capacity</dt><dd>{roomUtilization.capacity}</dd></div>
+                    <div><dt>Lectures</dt><dd>{roomUtilization.lecture_count}</dd></div>
+                    <div><dt>Average occupancy</dt><dd>{roomUtilization.average_occupancy.toFixed(1)}</dd></div>
+                    <div><dt>Peak occupancy</dt><dd>{roomUtilization.peak_occupancy}</dd></div>
+                    <div><dt>Utilization</dt><dd>{roomUtilization.utilization_percent.toFixed(1)}%</dd></div>
+                  </dl>
+                  <div className="utilization-bar-row room-utilization-bar">
+                    <div className="utilization-track">
+                      <span style={{ width: `${Math.min(100, roomUtilization.utilization_percent)}%` }} />
+                    </div>
+                  </div>
+                  <div className="room-unused-periods">
+                    <h3>Unused periods</h3>
+                    {roomUtilization.unused_periods?.length ? (
+                      <ul>
+                        {roomUtilization.unused_periods.map((period) => (
+                          <li key={`${period.lecture_id}-${period.start}-${period.end}`}>
+                            Lecture {period.lecture_id}: {formatTime(period.start)}–{formatTime(period.end)}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : <p className="empty-state">No unused periods recorded.</p>}
+                  </div>
+                  <div className="room-recommendations">
+                    <h3>Recommendations</h3>
+                    {roomUtilization.recommendations?.includes('Not enough data') ? (
+                      <p className="empty-state">Not enough data to suggest room changes</p>
+                    ) : roomUtilization.recommendations?.length ? (
+                      <ul>
+                        {roomUtilization.recommendations.map((recommendation) => (
+                          <li key={recommendation}>{recommendation}</li>
+                        ))}
+                      </ul>
+                    ) : <p className="empty-state">No recommendations available.</p>}
+                    {roomUtilization.recommendations?.some((item) => item !== 'Not enough data') && (
+                      <p className="room-advisory-label">Simulated resource optimization suggestion</p>
+                    )}
+                  </div>
+                  <p className="room-energy-note">Energy savings: Not measured</p>
+                </>
+              )}
             </article>
 
             <article className="panel suggestions-panel">

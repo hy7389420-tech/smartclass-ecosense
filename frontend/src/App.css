@@ -90,6 +90,22 @@ td small { display: block; color: #89938d; }
 .utilization-details div { border-radius: 8px; background: #f7f8f5; padding: 10px; }
 .utilization-details dt { color: #718078; font-size: 12px; }
 .utilization-details dd { margin: 5px 0 0; font-weight: 700; }
+.room-utilization-panel { grid-column: 1 / -1; }
+.room-indicative-note { margin: 0 0 14px; color: #8b5b20; }
+.room-status { border-radius: 999px; background: #edf1ec; padding: 5px 9px; font-size: 11px; font-weight: 800; text-transform: uppercase; }
+.room-status-underutilized { color: #8b5b20; background: #fff0d4; }
+.room-status-balanced { color: #24623b; background: #e1f4e7; }
+.room-status-overutilized { color: #8a3d3d; background: #fde8e8; }
+.room-utilization-details { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin: 0; }
+.room-utilization-details div { border-radius: 8px; background: #f7f8f5; padding: 10px; }
+.room-utilization-details dt { color: #718078; font-size: 12px; }
+.room-utilization-details dd { margin: 5px 0 0; font-weight: 700; }
+.room-utilization-bar { margin-top: 14px; }
+.room-unused-periods, .room-recommendations { margin-top: 18px; }
+.room-unused-periods h3, .room-recommendations h3 { margin: 0 0 8px; font-size: 15px; }
+.room-unused-periods ul, .room-recommendations ul { margin: 0; padding-left: 20px; color: #647067; }
+.room-advisory-label { color: #718078; font-size: 12px; }
+.room-energy-note { margin: 18px 0 0; font-weight: 700; }
 .error { color: #b42318; font-size: 14px; }
 .empty-state { color: #718078; }
 .empty-state.error-state { color: #b42318; }

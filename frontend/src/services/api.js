@@ -56,6 +56,10 @@ export function getLectureAnalytics(lectureId) {
   return apiRequest(`/analytics/lecture/${lectureId}`)
 }
 
+export function getClassroomUtilization(classroomId) {
+  return apiRequest(`/analytics/classroom/${classroomId}/utilization`)
+}
+
 export function getAlerts() {
   const params = new URLSearchParams({ unresolved_only: 'true', limit: '100', offset: '0' })
   return apiRequest(`/alerts?${params}`)
