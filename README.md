@@ -110,6 +110,7 @@ Open the frontend shown by Vite, normally `http://localhost:5173`.
   `cv/data/events.jsonl` and `cv/data/events.delivery` together before
   restarting the CV module.
 - Camera status describes recent system activity, not detection accuracy.
+- Retention script and tests exist; automatic scheduling is documented but not enabled by default.
 - No accuracy or energy-savings results have been measured yet.
 - Repeated camera alerts are grouped into one entry with a count.
 - Some integration states may depend on local configuration, a running backend,

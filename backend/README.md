@@ -247,6 +247,41 @@ Set-Location backend
 Each run writes an audit entry. This job does not delete attendance records or
 audit logs; the retention policy explains the resulting history limitation.
 
+### Scheduling retention
+
+Automatic scheduling is NOT enabled by default. Run the dry-run first and review
+the candidate counts before enabling deletion. Deletion is irreversible.
+
+From the repository root, the dry-run command is:
+
+```powershell
+Set-Location backend
+.\.venv-backend\Scripts\python.exe -m scripts.retention
+```
+
+The real deletion command is:
+
+```powershell
+Set-Location backend
+.\.venv-backend\Scripts\python.exe -m scripts.retention --execute
+```
+
+Example Windows Task Scheduler command to run the real deletion daily at
+02:00, with the scheduled working directory set to the repository's
+`backend` folder:
+
+```text
+C:\path\to\SmartClass_EcoSense\.venv-backend\Scripts\python.exe -m scripts.retention --execute
+```
+
+Configure the daily task with `schtasks.exe /Create /SC DAILY /ST 02:00`
+and set its working directory to the backend folder. Example cron entry,
+adjust the repository path and Python executable for the server:
+
+```cron
+0 2 * * * cd /path/to/SmartClass_EcoSystem_Project/backend && ./.venv-backend/bin/python -m scripts.retention --execute >> /var/log/ecosense-retention.log 2>&1
+```
+
 ## Manual review and camera health
 
 Staff with access to a lecture can review flagged events at `GET /review/events`.
