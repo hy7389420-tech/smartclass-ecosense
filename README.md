@@ -79,6 +79,10 @@ npm run dev
 
 Open the frontend shown by Vite, normally `http://localhost:5173`.
 
+## Verified features
+
+- Human review workflow (resolve without correction and save human correction) was verified in the browser with audit log entries.
+
 ## Privacy and responsible use
 
 - Raw video and continuous raw audio are not stored in the application data
