@@ -232,6 +232,133 @@ def test_permanent_client_error_keeps_event_pending_without_retry(
     assert "HTTP 422" in capsys.readouterr().out
 
 
+def test_mismatched_resources_are_moved_to_skipped_archive(
+    tmp_path, monkeypatch, capsys
+) -> None:
+    output_path = tmp_path / "events.jsonl"
+    mismatched_event = {
+        "client_event_id": "old-event",
+        "student_id": "STUDENT_A",
+        "flagged_for_review": False,
+        "classroom_id": 8,
+        "lecture_id": 7,
+        "event_type": "ENTRY",
+        "timestamp": "2030-01-01T10:00:00+00:00",
+        "confidence": 0.9,
+        "source": "camera",
+        "presence_confirmed": True,
+    }
+    output_path.write_text(json.dumps(mismatched_event) + "\n", encoding="utf-8")
+    output_path.with_suffix(".delivery").write_text("0\n", encoding="ascii")
+
+    posted = []
+    sender = configured_sender(monkeypatch, output_path)
+    monkeypatch.setattr(
+        "cv.event_sender.httpx.post",
+        lambda *_args, **_kwargs: posted.append(True) or httpx.Response(200),
+    )
+    try:
+        wait_for_checkpoint(output_path.with_suffix(".delivery"), 1)
+    finally:
+        sender.close()
+
+    skipped_path = tmp_path / "events.skipped.jsonl"
+    skipped = json.loads(skipped_path.read_text(encoding="utf-8"))
+    assert skipped["event"] == mismatched_event
+    assert "lecture/classroom mismatch" in skipped["reason"]
+    assert posted == []
+    assert "2030-01-01T10:00:00+00:00" in json.dumps(skipped["event"])
+
+
+def test_outside_window_422_moves_event_to_skipped_archive(
+    tmp_path, monkeypatch
+) -> None:
+    output_path = tmp_path / "events.jsonl"
+    sender = configured_sender(monkeypatch, output_path)
+    response = httpx.Response(
+        422,
+        json={
+            "error": {
+                "code": "TIMESTAMP_OUTSIDE_ALLOWED_WINDOW",
+                "message": "Event timestamp is outside the allowed lecture time window.",
+            }
+        },
+    )
+    monkeypatch.setattr(
+        "cv.event_sender.httpx.post",
+        lambda *_args, **_kwargs: response,
+    )
+    try:
+        sender.send(track_id=1, event_type="ENTRY", confidence=0.9)
+        wait_for_checkpoint(sender.checkpoint_path, 1)
+    finally:
+        sender.close()
+
+    skipped = json.loads((tmp_path / "events.skipped.jsonl").read_text(encoding="utf-8"))
+    assert skipped["reason"] == "outside lecture window"
+
+
+def test_checkpoint_ahead_names_files_and_safe_fix(tmp_path, monkeypatch, capsys) -> None:
+    output_path = tmp_path / "events.jsonl"
+    output_path.write_text("{}\n", encoding="utf-8")
+    checkpoint_path = output_path.with_suffix(".delivery")
+    checkpoint_path.write_text("3\n", encoding="ascii")
+    sender = configured_sender(monkeypatch, output_path)
+    try:
+        sender._drain_archive()
+    finally:
+        sender.close()
+
+    output = capsys.readouterr().out
+    assert str(checkpoint_path) in output or "events.delivery" in output
+    assert str(output_path) in output
+    assert "Safe fix" in output
+
+
+def test_422_validation_detail_prints_field_names_only(
+    tmp_path, monkeypatch, capsys
+) -> None:
+    output_path = tmp_path / "events.jsonl"
+    sender = configured_sender(monkeypatch, output_path)
+    response = httpx.Response(
+        422,
+        json={
+            "detail": [
+                {
+                    "loc": ["body", "timestamp"],
+                    "msg": "timestamp is invalid",
+                    "type": "value_error",
+                },
+                {
+                    "loc": ["body", "student_id"],
+                    "msg": "student is invalid",
+                    "type": "value_error",
+                },
+            ]
+        },
+    )
+    monkeypatch.setattr(
+        "cv.event_sender.httpx.post",
+        lambda *_args, **_kwargs: response,
+    )
+    try:
+        sender.send(track_id=1, event_type="ENTRY", confidence=0.9)
+        deadline = time.monotonic() + 3
+        output = ""
+        while time.monotonic() < deadline:
+            output += capsys.readouterr().out
+            if "HTTP 422" in output:
+                break
+            threading.Event().wait(0.01)
+    finally:
+        sender.close()
+
+    output += capsys.readouterr().out
+    assert "timestamp, student_id" in output
+    assert "timestamp is invalid" not in output
+    assert "test-camera-key" not in output
+
+
 def test_sender_resumes_pending_jsonl_after_restart(tmp_path, monkeypatch) -> None:
     output_path = tmp_path / "events.jsonl"
     archived_event = {

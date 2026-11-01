@@ -143,12 +143,21 @@ class EventSender:
         return value
 
     def _write_checkpoint(self, value: int) -> None:
-        temporary_path = self.checkpoint_path.with_suffix(".delivery.tmp")
+        temporary_path = self.checkpoint_path.with_name(
+            f"{self.checkpoint_path.name}.{uuid.uuid4().hex}.tmp"
+        )
         with temporary_path.open("w", encoding="ascii") as checkpoint_file:
             checkpoint_file.write(f"{value}\n")
             checkpoint_file.flush()
             os.fsync(checkpoint_file.fileno())
-        os.replace(temporary_path, self.checkpoint_path)
+        for attempt in range(5):
+            try:
+                os.replace(temporary_path, self.checkpoint_path)
+                return
+            except PermissionError:
+                if attempt == 4:
+                    raise
+                time.sleep(0.05)
 
     def _deliver_pending_events(self) -> None:
         while not self._delivery_stop.is_set():
@@ -174,17 +183,53 @@ class EventSender:
                 events = [json.loads(line) for line in event_file if line.strip()]
 
         if checkpoint > len(events):
-            raise RuntimeError(
-                "Event-delivery checkpoint is ahead of the JSONL archive; "
-                "events were not sent."
+            print(
+                f"Delivery checkpoint {self.checkpoint_path} is ahead of archive "
+                f"{self.output_path}. Safe fix: reset the checkpoint to 0 only "
+                "after verifying stale events, or remove both delivery files and "
+                "restart so the configured lecture can be archived again."
             )
+            return
 
         for index in range(checkpoint, len(events)):
             event = events[index]
-            if not self._post_event_with_retries(event):
+            mismatch_reason = self._resource_mismatch_reason(event)
+            if mismatch_reason is not None:
+                self._write_skipped_event(event, mismatch_reason)
+            elif not self._post_event_with_retries(event):
                 return
             with self._archive_lock:
                 self._write_checkpoint(index + 1)
+
+    def _resource_mismatch_reason(self, event: dict[str, object]) -> str | None:
+        mismatches = []
+        if event.get("lecture_id") != self.lecture_id:
+            mismatches.append(
+                f"lecture_id={event.get('lecture_id')!r}, configured "
+                f"lecture_id={self.lecture_id!r}"
+            )
+        if event.get("classroom_id") != self.classroom_id:
+            mismatches.append(
+                f"classroom_id={event.get('classroom_id')!r}, configured "
+                f"classroom_id={self.classroom_id!r}"
+            )
+        if not mismatches:
+            return None
+        return "lecture/classroom mismatch (" + "; ".join(mismatches) + ")"
+
+    def _write_skipped_event(
+        self, event: dict[str, object], reason: str
+    ) -> None:
+        skipped_path = self.output_path.with_name(
+            f"{self.output_path.stem}.skipped.jsonl"
+        )
+        record = {"reason": reason, "event": event}
+        with self._archive_lock:
+            skipped_path.parent.mkdir(parents=True, exist_ok=True)
+            with skipped_path.open("a", encoding="utf-8") as skipped_file:
+                skipped_file.write(json.dumps(record) + "\n")
+                skipped_file.flush()
+                os.fsync(skipped_file.fileno())
 
     def _post_event_with_retries(self, event: dict[str, object]) -> bool:
         endpoint = f"{self.api_base_url}/events"
@@ -225,6 +270,20 @@ class EventSender:
                 )
                 continue
 
+            if response.status_code == 422:
+                if self._is_outside_lecture_window(response):
+                    self._write_skipped_event(event, "outside lecture window")
+                    return True
+                fields = self._validation_detail_fields(response)
+                fields_text = ", ".join(fields) if fields else "unknown"
+                print(
+                    f"Backend rejected an event with HTTP 422; validation detail "
+                    f"fields: {fields_text}; event remains pending in "
+                    f"{self.output_path}."
+                )
+                self._delivery_blocked = True
+                return False
+
             print(
                 f"Backend rejected an event with HTTP {response.status_code}; "
                 f"event remains pending in {self.output_path}."
@@ -233,6 +292,40 @@ class EventSender:
             return False
 
         return False
+
+    @staticmethod
+    def _is_outside_lecture_window(response: httpx.Response) -> bool:
+        try:
+            payload = response.json()
+        except (json.JSONDecodeError, ValueError):
+            return False
+        if isinstance(payload, dict):
+            error = payload.get("error")
+            if isinstance(error, dict) and error.get("code") == (
+                "TIMESTAMP_OUTSIDE_ALLOWED_WINDOW"
+            ):
+                return True
+        return False
+
+    @staticmethod
+    def _validation_detail_fields(response: httpx.Response) -> list[str]:
+        try:
+            payload = response.json()
+        except (json.JSONDecodeError, ValueError):
+            return []
+
+        details = payload.get("detail", []) if isinstance(payload, dict) else []
+        fields: list[str] = []
+        if isinstance(details, list):
+            for item in details:
+                if not isinstance(item, dict):
+                    continue
+                location = item.get("loc", [])
+                if isinstance(location, list):
+                    for value in location:
+                        if isinstance(value, str) and value not in fields:
+                            fields.append(value)
+        return fields
 
     @staticmethod
     def _retry_after_seconds(response: httpx.Response) -> float | None:
