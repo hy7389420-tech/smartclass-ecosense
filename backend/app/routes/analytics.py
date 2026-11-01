@@ -31,6 +31,8 @@ from app.services.analytics import (
     analyze_lecture,
     classify_utilization,
     utilization_suggestion,
+    utilization_recommendations,
+    utilization_status,
 )
 
 router = APIRouter(
@@ -235,6 +237,15 @@ def read_classroom_utilization(
         settings.overutilized_cutoff_percent,
         has_data=bool(results),
     )
+    accessible_classroom_count = len(
+        set(
+            session.scalars(
+                select(Lecture.classroom_id).where(
+                    Lecture.class_id.in_(class_scope(session, user)),
+                )
+            )
+        )
+    )
     return ClassroomUtilizationRead(
         classroom_id=classroom.id,
         classroom_name=classroom.name,
@@ -253,6 +264,14 @@ def read_classroom_utilization(
         simulated=True,
         suggestion=utilization_suggestion(
             classroom.name, utilization_percent, classification
+        ),
+        status=utilization_status(classification),
+        recommendations=utilization_recommendations(
+            classroom.name,
+            utilization_percent,
+            classification,
+            lecture_count=len(results),
+            classroom_count=accessible_classroom_count,
         ),
     )
 

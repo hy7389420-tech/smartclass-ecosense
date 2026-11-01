@@ -7,6 +7,14 @@ from typing import Literal
 UtilizationLabel = Literal["no_data", "underutilized", "well_utilized", "overutilized"]
 OutsidePeriod = Literal["day", "week", "month"]
 
+# Configurable defaults for advisory room-utilization recommendations.
+# These are not measured baselines.
+UNDERUTILIZED_CUTOFF_PERCENT = 40.0
+OVERUTILIZED_CUTOFF_PERCENT = 90.0
+MIN_RECOMMENDATION_LECTURES = 2
+RECOMMENDATION_LABEL = "Simulated resource optimization suggestion"
+NOT_ENOUGH_DATA = "Not enough data"
+
 
 @dataclass(frozen=True, slots=True)
 class OccupancyEvent:
@@ -200,6 +208,45 @@ def utilization_suggestion(
         f"{room_name} average utilization is {utilization_percent:.0f}%. "
         "Occupancy data can support resource optimization."
     )
+
+
+def utilization_status(classification: UtilizationLabel) -> str:
+    if classification == "well_utilized":
+        return "balanced"
+    return classification
+
+
+def utilization_recommendations(
+    classroom_name: str,
+    utilization_percent: float,
+    classification: UtilizationLabel,
+    *,
+    lecture_count: int,
+    classroom_count: int,
+) -> list[str]:
+    if (
+        classroom_count < 2
+        or lecture_count < MIN_RECOMMENDATION_LECTURES
+        or classification == "no_data"
+    ):
+        return [NOT_ENOUGH_DATA]
+
+    if classification == "underutilized":
+        advice = (
+            f"review scheduling for {classroom_name}; it is used at "
+            f"{utilization_percent:.0f}% average utilization."
+        )
+    elif classification == "overutilized":
+        advice = (
+            f"review capacity or scheduling for {classroom_name}; it is used at "
+            f"{utilization_percent:.0f}% average utilization."
+        )
+    else:
+        advice = (
+            f"continue the existing schedule for {classroom_name}; average "
+            f"utilization is {utilization_percent:.0f}%."
+        )
+    return [f"{RECOMMENDATION_LABEL}: {advice}"]
 
 
 def period_start(value: datetime, period: OutsidePeriod) -> date:

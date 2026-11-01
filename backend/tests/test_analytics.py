@@ -16,6 +16,8 @@ from app.services.analytics import (
     aggregate_outside_duration,
     analyze_lecture,
     classify_utilization,
+    utilization_recommendations,
+    utilization_status,
 )
 
 
@@ -113,6 +115,49 @@ def test_utilization_cutoff_boundaries_and_no_data():
     assert classify_utilization(90) == "well_utilized"
     assert classify_utilization(90.01) == "overutilized"
     assert classify_utilization(0, has_data=False) == "no_data"
+
+
+def test_utilization_status_categories():
+    assert utilization_status("underutilized") == "underutilized"
+    assert utilization_status("well_utilized") == "balanced"
+    assert utilization_status("overutilized") == "overutilized"
+
+
+def test_resource_recommendation_statuses_and_insufficient_data():
+    underutilized = utilization_recommendations(
+        "Room 101",
+        30,
+        "underutilized",
+        lecture_count=3,
+        classroom_count=2,
+    )
+    balanced = utilization_recommendations(
+        "Room 101",
+        60,
+        "well_utilized",
+        lecture_count=3,
+        classroom_count=2,
+    )
+    overutilized = utilization_recommendations(
+        "Room 101",
+        95,
+        "overutilized",
+        lecture_count=3,
+        classroom_count=2,
+    )
+
+    assert "underutilized" not in underutilized[0]
+    assert "review scheduling" in underutilized[0]
+    assert "30% average utilization" in underutilized[0]
+    assert "existing schedule" in balanced[0]
+    assert "review capacity or scheduling" in overutilized[0]
+    assert utilization_recommendations(
+        "Room 101",
+        30,
+        "underutilized",
+        lecture_count=1,
+        classroom_count=2,
+    ) == ["Not enough data"]
 
 
 def test_outside_duration_periods_use_day_week_and_month_starts():
@@ -231,6 +276,8 @@ def test_analytics_endpoints_hand_check_and_simulated_suggestion(
     assert result["average_occupancy"] == 42
     assert result["utilization_percent"] == 70
     assert result["classification"] == "well_utilized"
+    assert result["status"] == "balanced"
+    assert result["energy_savings"] == "Not measured"
     assert result["simulated"] is True
     assert (
         "occupancy data can support resource optimization"

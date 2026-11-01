@@ -267,6 +267,7 @@ def test_all_user_data_routers_require_authentication(client):
         "/dashboard/1",
         "/analytics/outside-duration",
         "/analytics/lecture/1",
+        "/analytics/classroom/1/utilization",
         "/insights/1",
         "/lectures/1/engagement",
         "/lectures/1/suggestions",

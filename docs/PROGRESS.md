@@ -4,6 +4,7 @@ Update this file at the END of every coding session (you or the AI agent).
 A new chat/agent reads this first to know where to continue.
 
 ## Current status
+- **2026-11-01 checkpoint 12A:** Extended the classroom utilization endpoint with balanced/underutilized/overutilized status, advisory recommendations, configured default thresholds, insufficient-data handling, and `Not measured` energy savings. Backend analytics/auth tests passed.
 - **2026-10-31 checkpoint 10:** Added the selected lecture's occupancy/utilization frontend panel with loading, empty, and error states and an explicit "Not measured" energy-savings label. Added authenticated JSON/CSV session report downloads with per-format loading state and download errors. Deduplicated unresolved camera alerts by kind, severity, and message with a visible count. Frontend verification pending.
 - **2026-10-31 checkpoint 9D:** Selected lecture is persisted in guarded localStorage and restored when it still exists in the lecture list; missing or unavailable saved state falls back to the existing default. Human-review timestamp fields now use the browser's local timezone and convert edited datetime-local values back to UTC ISO before correction submission. Frontend verification pending.
 - **2026-10-31 checkpoint 9C:** Dashboard pending review counts now share the active review filter used by the review queue (`flagged_for_review=true` and `review_status=needs_review`, with lecture and role scope). Added focused coverage for active versus resolved flagged events. Backend verification pending.

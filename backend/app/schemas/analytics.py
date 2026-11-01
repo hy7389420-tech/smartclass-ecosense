@@ -69,6 +69,9 @@ class ClassroomUtilizationRead(ORMModel):
     classification: UtilizationClass
     simulated: bool
     suggestion: str
+    status: Literal["no_data", "underutilized", "balanced", "overutilized"]
+    recommendations: list[str]
+    energy_savings: str = "Not measured"
 
     @field_validator("peak_time", mode="before")
     @classmethod
