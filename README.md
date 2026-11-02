@@ -83,6 +83,7 @@ Open the frontend shown by Vite, normally `http://localhost:5173`.
 ## Verified features
 
 - Human review workflow (resolve without correction and save human correction) was verified in the browser with audit log entries.
+- Role-based access (ADMIN, HOD, FACULTY, STUDENT) is verified by 21 automated auth and security tests; browser testing was done with the ADMIN account only.
 
 ## Privacy and responsible use
 
@@ -105,6 +106,7 @@ Open the frontend shown by Vite, normally `http://localhost:5173`.
 
 ## Known limitations
 
+- HOD, faculty and student login accounts are not provisioned in the demo database.
 - The camera/CV module is offline in the demo; the demo uses seeded events.
 - Live CV was tested with a webcam and detects entry/exit events; backend event delivery validation is still being finalized.
 - After changing `LECTURE_ID`, clear the stale CV queue files
