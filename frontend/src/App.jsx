@@ -131,11 +131,43 @@ function App() {
   const [engagementState, setEngagementState] = useState('loading')
   const [reviewEvents, setReviewEvents] = useState([])
   const [reviewState, setReviewState] = useState('loading')
-  const [reviewReason, setReviewReason] = useState({})
+  const [reviewDrafts, setReviewDrafts] = useState({})
   const dashboardRequestRef = useRef(false)
+  const reviewLoadedLectureRef = useRef(null)
+
+  function updateReviewDraft(eventId, field, value) {
+    setReviewDrafts((current) => ({
+      ...current,
+      [eventId]: {
+        ...current[eventId],
+        [field]: value,
+      },
+    }))
+  }
+
+  function clearReviewDraft(eventId) {
+    setReviewDrafts((current) => {
+      const next = { ...current }
+      delete next[eventId]
+      return next
+    })
+  }
+
+  const reviewHasUnsavedText = useCallback(() => {
+    return reviewEvents.some((event) => {
+      const draft = reviewDrafts[event.id]
+      if (!draft) return false
+      return String(draft.student_id || '') !== ''
+        || String(draft.reason || '') !== ''
+        || String(draft.event_type || '') !== String(event.event_type || 'ENTRY')
+        || String(draft.timestamp || '') !== formatLocalTimestamp(event.timestamp_utc)
+    })
+  }, [reviewEvents, reviewDrafts])
 
   const loadDashboard = useCallback(async (selectedId) => {
     if (!selectedId || dashboardRequestRef.current) return
+    const reviewInputFocused = document.activeElement?.closest('[data-review-form]')
+    if (reviewInputFocused || reviewHasUnsavedText()) return
     dashboardRequestRef.current = true
     setLoading(true)
     setError('')
@@ -151,8 +183,10 @@ function App() {
     setUtilizationState('loading')
     setRoomUtilization(null)
     setRoomUtilizationState('loading')
-    setReviewEvents([])
-    setReviewState('loading')
+    if (reviewLoadedLectureRef.current !== selectedId) {
+      setReviewEvents([])
+      setReviewState('loading')
+    }
     try {
       const [dashboardData, engagementData, suggestionData, suggestionHistoryData, reviewEventsData, alertsData, analyticsData] = await Promise.all([
         getDashboard(selectedId).catch((dashboardError) => ({
@@ -209,11 +243,28 @@ function App() {
         setSuggestionHistoryState(suggestionHistoryData.length ? 'ready' : 'no_data')
       }
       if (reviewEventsData.__error) {
-        setReviewEvents([])
-        setReviewState('error')
+        if (reviewEvents.length === 0) {
+          setReviewEvents([])
+          setReviewState('error')
+        }
       } else {
         setReviewEvents(reviewEventsData.items)
         setReviewState(reviewEventsData.items.length ? 'ready' : 'no_data')
+        reviewLoadedLectureRef.current = selectedId
+        setReviewDrafts((current) => {
+          const next = { ...current }
+          reviewEventsData.items.forEach((event) => {
+            if (!next[event.id]) {
+              next[event.id] = {
+                student_id: '',
+                reason: '',
+                event_type: event.event_type || 'ENTRY',
+                timestamp: formatLocalTimestamp(event.timestamp_utc),
+              }
+            }
+          })
+          return next
+        })
       }
       if (alertsData.__error) {
         setAlerts([])
@@ -265,7 +316,7 @@ function App() {
       setLoading(false)
       dashboardRequestRef.current = false
     }
-  }, [])
+  }, [reviewEvents, reviewHasUnsavedText])
 
   useEffect(() => {
     if (!token) return
@@ -330,13 +381,14 @@ function App() {
   }
 
     async function handleResolveReview(eventId) {
-      const reason = reviewReason[eventId]?.trim()
+      const reason = reviewDrafts[eventId]?.reason?.trim()
       if (!reason) {
         setError('Human review reason is required.')
         return
       }
       try {
         await resolveReviewEvent(eventId, reason)
+        clearReviewDraft(eventId)
         await loadDashboard(lectureId)
       } catch (err) {
         setError(err.message)
@@ -344,10 +396,9 @@ function App() {
     }
 
     async function handleCorrectReview(eventId) {
-      const form = document.querySelector(`[data-review-form="${eventId}"]`)
-      const formData = new FormData(form)
-      const reason = String(formData.get('reason') || '').trim()
-      const timestamp = String(formData.get('timestamp') || '')
+      const draft = reviewDrafts[eventId] || {}
+      const reason = String(draft.reason || '').trim()
+      const timestamp = String(draft.timestamp || '')
       if (!reason || !timestamp) {
         setError('Correction timestamp and human review reason are required.')
         return
@@ -355,11 +406,12 @@ function App() {
 
       try {
         await correctReviewEvent(eventId, {
-          student_id: formData.get('student_id') ? Number(formData.get('student_id')) : null,
-          event_type: formData.get('event_type'),
+          student_id: draft.student_id ? Number(draft.student_id) : null,
+          event_type: draft.event_type,
           timestamp: localTimestampToUtc(timestamp),
           reason,
         })
+        clearReviewDraft(eventId)
         await loadDashboard(lectureId)
       } catch (err) {
         setError(err.message)
@@ -762,27 +814,40 @@ function App() {
             </div>
             <div className="review-fields">
               <label>Event type
-                <select name="event_type" defaultValue="ENTRY">
+                <select
+                  name="event_type"
+                  value={reviewDrafts[event.id]?.event_type || event.event_type || 'ENTRY'}
+                  onChange={(change) => updateReviewDraft(event.id, 'event_type', change.target.value)}
+                >
                   <option value="ENTRY">ENTRY</option>
                   <option value="EXIT">EXIT</option>
                 </select>
               </label>
               <label>Timestamp
-                <input name="timestamp" type="datetime-local" defaultValue={formatLocalTimestamp(event.timestamp_utc)} />
+                <input
+                  name="timestamp"
+                  type="datetime-local"
+                  value={reviewDrafts[event.id]?.timestamp || formatLocalTimestamp(event.timestamp_utc)}
+                  onChange={(change) => updateReviewDraft(event.id, 'timestamp', change.target.value)}
+                />
               </label>
               {!event.student_id && (
                 <label>Student ID
-                  <input name="student_id" type="number" min="1" required />
+                  <input
+                    name="student_id"
+                    type="number"
+                    min="1"
+                    required
+                    value={reviewDrafts[event.id]?.student_id || ''}
+                    onChange={(change) => updateReviewDraft(event.id, 'student_id', change.target.value)}
+                  />
                 </label>
               )}
               <label className="review-reason">Review reason
                 <input
                   name="reason"
-                  value={reviewReason[event.id] || ''}
-                  onChange={(change) => setReviewReason((current) => ({
-                    ...current,
-                    [event.id]: change.target.value,
-                  }))}
+                  value={reviewDrafts[event.id]?.reason || ''}
+                  onChange={(change) => updateReviewDraft(event.id, 'reason', change.target.value)}
                   maxLength="1000"
                   required
                 />
